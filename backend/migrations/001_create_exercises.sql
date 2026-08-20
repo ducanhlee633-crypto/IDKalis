@@ -11,7 +11,7 @@ create table if not exists exercises (
   primary_muscles text[] not null,                -- Primary Muscles (bắt buộc)
   secondary_muscles text[] default '{}',          -- Secondary Muscles
   movement_type text not null,                    -- Movement Type: PUSH / PULL / LEGS / CORE
-  input_type text not null default 'note',        -- Input Type: note / weight / time
+  input_type text not null default 'note',        -- Input Type: note / reps_time / weight / time
   created_at timestamptz default now()            -- thời điểm tạo
 );
 

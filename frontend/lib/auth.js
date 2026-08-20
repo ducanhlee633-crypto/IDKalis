@@ -3,6 +3,9 @@ export const API_BASE = "http://localhost:8000";
 const TOKEN_KEY = "idk_access_token";
 const USER_KEY = "idk_user";
 
+export const DEV_TOKEN = "dev-quick-login-token";
+export const DEV_USER = { id: "dev-user", username: "dev_user" };
+
 export function getStoredSession() {
   if (typeof window === "undefined") return null;
   try {

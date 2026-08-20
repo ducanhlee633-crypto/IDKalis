@@ -129,6 +129,7 @@ export default function ExerciseLibraryPage() {
     time: "Time Hold",
     weight: "Weighted",
     note: "Bodyweight",
+    reps_time: "Reps + Time",
   };
 
   return (
@@ -421,6 +422,7 @@ export default function ExerciseLibraryPage() {
                     className="w-full bg-(--surface-3) border border-(--line-strong) px-3 py-2 text-xs text-zinc-200 outline-none focus:border-(--accent-line) transition"
                   >
                     <option value="note">Bodyweight</option>
+                    <option value="reps_time">Reps + Time</option>
                     <option value="time">Time Hold</option>
                     <option value="weight">Weighted</option>
                   </select>

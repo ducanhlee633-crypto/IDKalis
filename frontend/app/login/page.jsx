@@ -2,12 +2,12 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn, UserPlus, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
+import { LogIn, UserPlus, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle, Zap } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register } = useAuth();
+  const { login, register, quickLogin } = useAuth();
 
   const [mode, setMode] = useState("login");
   const [loginForm, setLoginForm] = useState({ identifier: "", password: "" });
@@ -52,6 +52,11 @@ export default function LoginPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleQuickLogin = () => {
+    quickLogin();
+    router.push("/");
   };
 
   const inputClass =
@@ -273,6 +278,20 @@ export default function LoginPage() {
                   </p>
                 </form>
               )}
+            </div>
+
+            {/* Dev quick login */}
+            <div className="mt-4">
+              <button
+                onClick={handleQuickLogin}
+                className="w-full flex items-center justify-center gap-2 border border-dashed border-(--accent-line) bg-(--accent-soft)/40 text-(--accent) hover:bg-(--accent-soft) text-xs px-4 py-2.5 transition active:scale-[0.98]"
+              >
+                <Zap className="w-4 h-4" />
+                <span>Quick login (dev)</span>
+              </button>
+              <p className="text-center text-[10px] text-(--faint) mt-2">
+                Dev only — bỏ qua backend &amp; email verification, vào thẳng dashboard
+              </p>
             </div>
 
             {/* Footer hint */}

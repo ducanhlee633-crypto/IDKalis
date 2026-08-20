@@ -8,6 +8,8 @@ import {
   clearSession,
   getStoredSession,
   storeSession,
+  DEV_TOKEN,
+  DEV_USER,
 } from "@/lib/auth";
 
 const AuthContext = createContext(null);
@@ -21,6 +23,11 @@ export function AuthProvider({ children }) {
     (async () => {
       const stored = getStoredSession();
       if (!stored || cancelled) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
+      if (stored.token === DEV_TOKEN) {
+        if (!cancelled) setSession({ token: stored.token, user: stored.user });
         if (!cancelled) setLoading(false);
         return;
       }
@@ -47,13 +54,19 @@ export function AuthProvider({ children }) {
 
   const register = (payload) => apiRegister(payload);
 
+  const quickLogin = () => {
+    storeSession(DEV_TOKEN, DEV_USER);
+    setSession({ token: DEV_TOKEN, user: DEV_USER });
+    return DEV_USER;
+  };
+
   const logout = () => {
     clearSession();
     setSession(null);
   };
 
   const value = useMemo(
-    () => ({ session, user: session?.user ?? null, loading, login, register, logout }),
+    () => ({ session, user: session?.user ?? null, loading, login, register, quickLogin, logout }),
     [session, loading]
   );
 

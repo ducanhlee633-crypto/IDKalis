@@ -15,6 +15,7 @@ import ExerciseBlock from "./ExerciseBlock";
 import WorkoutTimer from "./WorkoutTimer";
 import ExerciseInfoModal from "./ExerciseInfoModal";
 import WorkoutSummaryModal from "./WorkoutSummaryModal";
+import WorkoutCompleteModal from "./WorkoutCompleteModal";
 
 export default function ActiveWorkoutPage({ program, onFinish }) {
   // Initialize sets state from program exercises
@@ -31,6 +32,8 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
 
   const [infoExercise, setInfoExercise] = useState(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [showComplete, setShowComplete] = useState(false);
+  const [sessionNumber, setSessionNumber] = useState(1);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const moreMenuRef = useRef(null);
@@ -94,13 +97,26 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
     });
   };
 
-  // Save session
+  // Get next mock workout session number (persisted so it increments across sessions)
+  const getNextSessionNumber = () => {
+    if (typeof window === "undefined") return 1;
+    const key = "idk_workout_session_count";
+    const current = parseInt(window.localStorage.getItem(key) || "0", 10) || 0;
+    const next = current + 1;
+    window.localStorage.setItem(key, String(next));
+    return next;
+  };
+
+  // Save session -> show congratulation board
   const handleSave = () => {
-    console.log("Workout saved:", {
-      program: program.name,
-      duration: timerSeconds,
-      sets,
-    });
+    setSessionNumber(getNextSessionNumber());
+    setShowSummary(false);
+    setShowComplete(true);
+  };
+
+  // Close congratulation board -> back to workouts list
+  const handleCompleteClose = () => {
+    setShowComplete(false);
     onFinish();
   };
 
@@ -243,6 +259,17 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
         timerSeconds={timerSeconds}
         exercises={program.exercises}
         sets={sets}
+      />
+
+      {/* Workout Complete (Congratulation) Modal */}
+      <WorkoutCompleteModal
+        isOpen={showComplete}
+        onClose={handleCompleteClose}
+        workoutName={program.name}
+        timerSeconds={timerSeconds}
+        exercises={program.exercises}
+        sets={sets}
+        sessionNumber={sessionNumber}
       />
     </div>
   );

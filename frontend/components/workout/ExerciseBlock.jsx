@@ -16,6 +16,7 @@ export default function ExerciseBlock({
   const getColumnLabel = () => {
     switch (exercise.inputType) {
       case "time":
+      case "reps_time":
         return "TIME (S)";
       case "weight":
         return "WEIGHT (KG)";
@@ -28,6 +29,7 @@ export default function ExerciseBlock({
   const getFieldKey = () => {
     switch (exercise.inputType) {
       case "time":
+      case "reps_time":
         return "time";
       case "weight":
         return "weight";
