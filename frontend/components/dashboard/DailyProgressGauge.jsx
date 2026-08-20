@@ -11,10 +11,13 @@ export default function DailyProgressGauge() {
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="relative bg-[#121215] border border-[#222228] p-5 square-frame flex flex-col justify-between items-center text-center h-full">
+    <div className="relative bg-(--surface) border border-(--line) p-5 square-frame flex flex-col justify-between items-center text-center h-full">
       {/* Header */}
       <div className="w-full flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">Daily progress</h3>
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-px bg-(--accent)" />
+          <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">Daily progress</h3>
+        </div>
       </div>
 
       {/* Circular Gauge */}
@@ -30,42 +33,39 @@ export default function DailyProgressGauge() {
             fill="transparent"
           />
 
-          {/* Progress Glowing Neon Arc */}
+          {/* Progress Arc */}
           <circle
             cx="80"
             cy="80"
             r={radius}
-            stroke="#00E5FF"
+            stroke="#ff4d4d"
             strokeWidth={strokeWidth}
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
+            strokeLinecap="butt"
             fill="transparent"
-            style={{
-              filter: "drop-shadow(0 0 8px rgba(0, 229, 255, 0.75))",
-              transition: "stroke-dashoffset 1s ease-in-out",
-            }}
+            style={{ transition: "stroke-dashoffset 1s ease-in-out" }}
           />
         </svg>
 
         {/* Inner Centered Metrics */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-3xl font-extrabold text-zinc-100 tracking-tight font-sans">
+          <span className="font-display text-3xl font-semibold text-zinc-50 tracking-tight tnum">
             {percentage}%
           </span>
-          <span className="mt-1 px-2 py-0.5 bg-emerald-400/10 border border-emerald-400/20 text-emerald-400 text-[10px] font-bold tracking-wider uppercase">
+          <span className="mt-1 px-2 py-0.5 bg-white/5 border border-(--line-strong) text-zinc-100 text-[10px] font-bold tracking-wider uppercase">
             {DAILY_PROGRESS.statusText}
           </span>
         </div>
       </div>
 
       {/* Footnote Stats */}
-      <div className="w-full pt-3 border-t border-white/[0.04] space-y-1">
-        <div className="text-xs font-semibold text-zinc-200">
+      <div className="w-full pt-3 border-t border-(--line) space-y-1">
+        <div className="font-display text-xs font-semibold text-zinc-200 tnum">
           <span>{DAILY_PROGRESS.currentCalories}</span>
-          <span className="text-zinc-500 font-normal"> / {DAILY_PROGRESS.targetCalories} kcal</span>
+          <span className="text-(--faint) font-normal"> / {DAILY_PROGRESS.targetCalories} kcal</span>
         </div>
-        <p className="text-[11px] text-zinc-400 font-medium">
+        <p className="text-[11px] text-(--muted) font-medium">
           {DAILY_PROGRESS.motivationalQuote}
         </p>
       </div>

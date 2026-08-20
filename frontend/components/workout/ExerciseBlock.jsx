@@ -40,11 +40,11 @@ export default function ExerciseBlock({
   const fieldKey = getFieldKey();
 
   return (
-    <div className="bg-[#121215] border border-[#222228] p-5 relative">
+    <div className="bg-(--surface) border border-(--line) p-5 relative">
       {/* Exercise Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400 text-sm font-bold shrink-0">
+          <div className="w-8 h-8 bg-(--accent-soft) border border-(--accent-line) flex items-center justify-center text-(--accent) font-display text-sm font-bold shrink-0">
             {exerciseIndex + 1}
           </div>
           <div>
@@ -58,7 +58,7 @@ export default function ExerciseBlock({
         </div>
         <button
           onClick={() => onInfoClick(exercise)}
-          className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition border border-white/5"
+          className="p-1.5 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition border border-(--line)"
         >
           <Info className="w-4 h-4" />
         </button>
@@ -68,19 +68,19 @@ export default function ExerciseBlock({
       <div className="space-y-0">
         {/* Column Headers */}
         <div className="grid grid-cols-[40px_1fr_1fr_1fr_40px] sm:grid-cols-[50px_1fr_1fr_1fr_50px] gap-1.5 sm:gap-2 px-2 pb-2">
-          <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em]">
             SET
           </span>
-          <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em]">
             {getColumnLabel()}
           </span>
-          <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em]">
             REPS
           </span>
-          <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em]">
             RPE
           </span>
-          <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider text-center">
+          <span className="text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] text-center">
             DONE
           </span>
         </div>
@@ -97,7 +97,7 @@ export default function ExerciseBlock({
               key={setIdx}
               className={`grid grid-cols-[40px_1fr_1fr_1fr_40px] sm:grid-cols-[50px_1fr_1fr_1fr_50px] gap-1.5 sm:gap-2 items-center px-2 py-1.5 transition-all ${
                 isActive
-                  ? "border-l-2 border-l-blue-400 bg-blue-400/[0.03]"
+                  ? "border-l-2 border-l-(--accent) bg-(--accent-soft)"
                   : isDone
                   ? "opacity-60"
                   : ""
@@ -106,7 +106,7 @@ export default function ExerciseBlock({
               {/* Set Number */}
               <span
                 className={`text-xs font-bold text-center ${
-                  isActive ? "text-blue-400" : "text-zinc-400"
+                  isActive ? "text-(--accent)" : "text-(--muted)"
                 }`}
               >
                 {setIdx + 1}
@@ -119,7 +119,7 @@ export default function ExerciseBlock({
                 onChange={(e) =>
                   onSetChange(exercise.id, setIdx, fieldKey, e.target.value)
                 }
-                className="bg-[#0d0d10] border border-white/[0.08] text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-cyan-400/40 transition placeholder:text-zinc-600"
+                className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
                 placeholder="-"
               />
 
@@ -130,7 +130,7 @@ export default function ExerciseBlock({
                 onChange={(e) =>
                   onSetChange(exercise.id, setIdx, "reps", e.target.value)
                 }
-                className="bg-[#0d0d10] border border-white/[0.08] text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-cyan-400/40 transition placeholder:text-zinc-600"
+                className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
                 placeholder="-"
               />
 
@@ -141,7 +141,7 @@ export default function ExerciseBlock({
                 onChange={(e) =>
                   onSetChange(exercise.id, setIdx, "rpe", e.target.value)
                 }
-                className="bg-[#0d0d10] border border-white/[0.08] text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-cyan-400/40 transition placeholder:text-zinc-600"
+                className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
                 placeholder="-"
               />
 
@@ -151,7 +151,7 @@ export default function ExerciseBlock({
                   onClick={() => onToggleDone(exercise.id, setIdx)}
                   className={`w-7 h-7 flex items-center justify-center border transition-all ${
                     isDone
-                      ? "bg-amber-400/20 border-amber-400/50 text-amber-400"
+                      ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
                       : "bg-[#0d0d10] border-white/[0.08] text-zinc-600 hover:border-zinc-500"
                   }`}
                 >
@@ -166,7 +166,7 @@ export default function ExerciseBlock({
       {/* Add Set Button */}
       <button
         onClick={() => onAddSet(exercise.id)}
-        className="mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 border border-dashed border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 text-xs transition"
+        className="mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 border border-dashed border-(--line-strong) text-(--faint) hover:text-zinc-300 hover:border-(--line-strong) text-xs transition"
       >
         <Plus className="w-3.5 h-3.5" />
         <span>Add Set</span>

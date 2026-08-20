@@ -42,24 +42,24 @@ export default function GoalsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">Calisthenics Goals</h1>
-        <p className="text-xs text-zinc-400 mt-1">Set and track milestone objectives for your bodyweight journey.</p>
+        <h1 className="font-display text-2xl font-semibold text-zinc-50 tracking-tight">Calisthenics Goals</h1>
+        <p className="text-xs text-(--muted) mt-1">Set and track milestone objectives for your bodyweight journey.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {goals.map((g, idx) => (
           <div
             key={idx}
-            className="bg-[#121215] border border-[#222228] p-5 square-frame"
+            className="bg-(--surface) border border-(--line) p-5 square-frame"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">{g.category}</span>
-              <span className="text-xs text-emerald-400 font-medium">{g.status}</span>
+              <span className="text-[10px] font-bold text-(--accent) uppercase tracking-[0.18em]">{g.category}</span>
+              <span className="text-xs text-(--muted) font-medium">{g.status}</span>
             </div>
             <h3 className="text-sm font-bold text-zinc-100 mb-2">{g.title}</h3>
-            <div className="w-full h-2 bg-[#1b1b22] overflow-hidden mb-3">
+            <div className="w-full h-2 bg-(--surface-3) overflow-hidden mb-3">
               <div
-                className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400"
+                className="h-full bg-(--accent)"
                 style={{ width: `${g.progress}%` }}
               />
             </div>

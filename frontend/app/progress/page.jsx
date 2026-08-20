@@ -12,7 +12,7 @@ export default function ProgressPage() {
   const [timeframe, setTimeframe] = useState("30d");
 
   return (
-    <div className="space-y-4 pb-10">
+    <div className="space-y-6 pb-10">
       {/* Top Header */}
       <ProgressHeader timeframe={timeframe} setTimeframe={setTimeframe} />
 
@@ -20,13 +20,13 @@ export default function ProgressPage() {
       <MetricKpiCards />
 
       {/* Middle Row: Performance Trend Chart & Training Consistency Heatmap */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <PerformanceTrendCard />
         <TrainingConsistencyCard />
       </div>
 
       {/* Bottom Row: Skill Progress Milestone Table & Current Bottleneck Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <SkillProgressTable />
         <CurrentBottleneckCard />
       </div>

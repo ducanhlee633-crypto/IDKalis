@@ -29,46 +29,46 @@ export default function MetricKpiCards() {
       id: "strength",
       title: "STRENGTH",
       icon: (
-        <span className="text-amber-400">
-          <BicepsIcon className="w-4 h-4 text-amber-400" />
+        <span className="text-(--muted)">
+          <BicepsIcon className="w-4 h-4" />
         </span>
       ),
       value: "↑ 12.4%",
-      valueColor: "text-emerald-400",
+      valueColor: "text-zinc-50",
       subtext: "vs previous 30 days",
       type: "sparkline-green",
       sparklinePath: "M0 18 C 20 22, 35 15, 50 18 C 65 21, 80 12, 95 16 C 110 20, 130 8, 145 12 C 160 16, 175 6, 190 10 L 190 28 L 0 28 Z",
       sparklineStroke: "M0 18 C 20 22, 35 15, 50 18 C 65 21, 80 12, 95 16 C 110 20, 130 8, 145 12 C 160 16, 175 6, 190 10",
-      strokeColor: "#10b981",
+      strokeColor: "#ff4d4d",
     },
     {
       id: "skill",
       title: "SKILL",
-      icon: <Star className="w-4 h-4 text-amber-400 fill-amber-400/20" />,
+      icon: <Star className="w-4 h-4 text-(--muted)" />,
       value: "↑ 8.7%",
-      valueColor: "text-emerald-400",
+      valueColor: "text-zinc-50",
       subtext: "vs previous 30 days",
       type: "sparkline-green",
       sparklinePath: "M0 20 C 25 17, 45 22, 70 16 C 95 10, 115 19, 140 12 C 165 5, 175 14, 190 8 L 190 28 L 0 28 Z",
       sparklineStroke: "M0 20 C 25 17, 45 22, 70 16 C 95 10, 115 19, 140 12 C 165 5, 175 14, 190 8",
-      strokeColor: "#10b981",
+      strokeColor: "#ff4d4d",
     },
     {
       id: "volume",
       title: "VOLUME",
-      icon: <Activity className="w-4 h-4 text-cyan-400" />,
+      icon: <Activity className="w-4 h-4 text-(--muted)" />,
       value: "↑ 15.2%",
-      valueColor: "text-emerald-400",
+      valueColor: "text-zinc-50",
       subtext: "vs previous 30 days",
       type: "sparkline-green",
       sparklinePath: "M0 22 C 20 18, 40 24, 60 14 C 80 4, 100 20, 120 10 C 140 0, 160 16, 190 6 L 190 28 L 0 28 Z",
       sparklineStroke: "M0 22 C 20 18, 40 24, 60 14 C 80 4, 100 20, 120 10 C 140 0, 160 16, 190 6",
-      strokeColor: "#10b981",
+      strokeColor: "#ff4d4d",
     },
     {
       id: "consistency",
       title: "CONSISTENCY",
-      icon: <Target className="w-4 h-4 text-cyan-400" />,
+      icon: <Target className="w-4 h-4 text-(--muted)" />,
       value: "87%",
       valueColor: "text-white font-bold",
       subtext: "24 / 28 sessions",
@@ -83,29 +83,31 @@ export default function MetricKpiCards() {
     {
       id: "recovery",
       title: "RECOVERY",
-      icon: <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" />,
+      icon: <Heart className="w-4 h-4 text-(--muted)" />,
       value: "Good",
-      valueColor: "text-amber-400 font-bold",
+      valueColor: "text-(--accent) font-bold",
       subtext: "Your body is ready",
       type: "sparkline-amber",
       sparklinePath: "M0 16 C 15 22, 30 12, 45 18 C 60 24, 75 14, 90 20 C 105 26, 120 12, 135 18 C 150 24, 165 14, 190 18 L 190 28 L 0 28 Z",
       sparklineStroke: "M0 16 C 15 22, 30 12, 45 18 C 60 24, 75 14, 90 20 C 105 26, 120 12, 135 18 C 150 24, 165 14, 190 18",
-      strokeColor: "#f59e0b",
+      strokeColor: "#ff4d4d",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {metrics.map((m) => (
         <div
           key={m.id}
-          className="relative bg-[#111114] border border-[#1f1f26] rounded-xl p-4 flex flex-col justify-between overflow-hidden group hover:border-[#2f2f3a] transition shadow-sm"
+          className="relative bg-(--surface) border border-(--line) p-4 flex flex-col justify-between overflow-hidden group hover:bg-(--surface-2) transition square-frame"
         >
           {/* Header with Icon & Title */}
           <div>
             <div className="flex items-center gap-2 mb-2.5">
-              <div className="shrink-0">{m.icon}</div>
-              <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">
+              <div className="w-7 h-7 bg-(--surface-3) border border-(--line) flex items-center justify-center shrink-0">
+                {m.icon}
+              </div>
+              <span className="text-[10px] font-semibold text-(--muted) uppercase tracking-[0.18em]">
                 {m.title}
               </span>
             </div>
@@ -128,7 +130,7 @@ export default function MetricKpiCards() {
                 {m.bars.map((bar, idx) => (
                   <div
                     key={idx}
-                    className="flex-1 bg-[#1e70a0] group-hover:bg-[#00e5ff] rounded-t-[1px] transition-colors"
+                    className="flex-1 bg-(--accent-soft) group-hover:bg-(--accent) transition-colors"
                     style={{ height: `${bar.h}%` }}
                   />
                 ))}

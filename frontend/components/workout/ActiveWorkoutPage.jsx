@@ -121,16 +121,16 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowSummary(true)}
-            className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition"
+            className="p-1.5 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[10px] font-bold text-cyan-400 tracking-wider uppercase">
+              <span className="text-[10px] font-bold text-(--accent) tracking-[0.18em] uppercase">
                 ACTIVE WORKOUT
               </span>
-              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <span className="led led-live" />
             </div>
             <h1 className="text-xl font-bold text-zinc-100 tracking-tight">
               {program.name}
@@ -140,7 +140,7 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
 
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Timer */}
-          <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[#1a1a22] border border-cyan-400/30 text-cyan-400 text-sm font-mono font-semibold">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 bg-(--surface-2) border border-(--accent-line) text-(--accent) text-sm font-display font-semibold tnum">
             <TimerIcon className="w-4 h-4" />
             <span>{timerDisplay}</span>
           </div>
@@ -148,7 +148,7 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
           {/* Save Session */}
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 bg-[#1c1c24] border border-white/10 text-zinc-200 text-xs font-semibold px-4 py-2 hover:bg-[#222230] transition"
+            className="flex items-center gap-2 btn-ghost text-xs font-semibold px-4 py-2"
           >
             <Save className="w-3.5 h-3.5" />
             <span>Save Session</span>
@@ -158,19 +158,19 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
           <div className="relative" ref={moreMenuRef}>
             <button
               onClick={() => setShowMoreMenu(!showMoreMenu)}
-              className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition border border-white/5"
+              className="p-2 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition border border-(--line)"
             >
               <MoreVertical className="w-4 h-4" />
             </button>
 
             {showMoreMenu && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-[#18181c] border border-[#2a2a32] shadow-xl z-40">
+              <div className="absolute right-0 top-full mt-1 w-48 bg-(--surface) border border-(--line-strong) z-40">
                 <button
                   onClick={() => {
                     setShowMoreMenu(false);
                     handleDiscard();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-red-400 hover:bg-red-400/10 transition"
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-(--accent) hover:bg-(--accent-soft) transition"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Discard Workout
@@ -219,7 +219,7 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
       <div className="flex justify-center pt-4">
         <button
           onClick={() => setShowSummary(true)}
-          className="flex items-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-8 py-3 transition shadow-lg shadow-blue-500/20"
+          className="flex items-center gap-2.5 btn-accent text-sm font-semibold px-8 py-3"
         >
           <Trophy className="w-4.5 h-4.5" />
           <span>Finish Workout</span>

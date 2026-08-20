@@ -11,7 +11,7 @@ import DailyProgressGauge from "@/components/dashboard/DailyProgressGauge";
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-5 animate-fadeIn">
+    <div className="space-y-5 animate-fade-in">
       {/* Greeting & Date Header */}
       <Header />
 

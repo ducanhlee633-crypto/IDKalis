@@ -22,7 +22,7 @@ export default function WorkoutTimer({ onTick }) {
   const display = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 
   return (
-    <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[#1a1a22] border border-cyan-400/30 text-cyan-400 text-sm font-mono font-semibold">
+    <div className="flex items-center gap-2 px-3.5 py-1.5 bg-(--surface-2) border border-(--accent-line) text-(--accent) text-sm font-display font-semibold tnum">
       <Timer className="w-4 h-4" />
       <span>{display}</span>
     </div>

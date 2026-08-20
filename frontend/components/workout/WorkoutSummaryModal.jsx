@@ -39,7 +39,7 @@ export default function WorkoutSummaryModal({
       onClick={onClose}
     >
       <div
-        className="bg-[#141418] border border-[#2a2a32] w-full max-w-sm shadow-2xl"
+        className="bg-(--surface) border border-(--line-strong) w-full max-w-sm"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -55,8 +55,8 @@ export default function WorkoutSummaryModal({
 
         {/* Trophy + Name */}
         <div className="p-6 text-center">
-          <div className="w-14 h-14 bg-amber-400/10 border border-amber-400/20 flex items-center justify-center mx-auto mb-4">
-            <Trophy className="w-7 h-7 text-amber-400" />
+          <div className="w-14 h-14 bg-white/5 border border-(--line-strong) flex items-center justify-center mx-auto mb-4">
+            <Trophy className="w-7 h-7 text-zinc-100" />
           </div>
           <h2 className="text-lg font-bold text-zinc-100 mb-1">{workoutName}</h2>
           <p className="text-xs text-zinc-500">Session complete!</p>
@@ -64,18 +64,18 @@ export default function WorkoutSummaryModal({
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3 px-6 pb-6">
-          <div className="bg-[#0d0d10] border border-white/5 p-3 text-center">
-            <Clock className="w-4 h-4 text-cyan-400 mx-auto mb-1.5" />
-            <p className="text-sm font-bold text-zinc-100 font-mono">{duration}</p>
+          <div className="bg-(--surface-3) border border-(--line) p-3 text-center">
+            <Clock className="w-4 h-4 text-(--accent) mx-auto mb-1.5" />
+            <p className="font-display text-sm font-bold text-zinc-100 tnum">{duration}</p>
             <p className="text-[10px] text-zinc-500 mt-0.5">Duration</p>
           </div>
-          <div className="bg-[#0d0d10] border border-white/5 p-3 text-center">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 mx-auto mb-1.5" />
+          <div className="bg-(--surface-3) border border-(--line) p-3 text-center">
+            <CheckCircle2 className="w-4 h-4 text-zinc-100 mx-auto mb-1.5" />
             <p className="text-sm font-bold text-zinc-100">{completedSets}/{totalSets}</p>
             <p className="text-[10px] text-zinc-500 mt-0.5">Sets Done</p>
           </div>
-          <div className="bg-[#0d0d10] border border-white/5 p-3 text-center">
-            <Dumbbell className="w-4 h-4 text-blue-400 mx-auto mb-1.5" />
+          <div className="bg-(--surface-3) border border-(--line) p-3 text-center">
+            <Dumbbell className="w-4 h-4 text-(--muted) mx-auto mb-1.5" />
             <p className="text-sm font-bold text-zinc-100">{exerciseCount}</p>
             <p className="text-[10px] text-zinc-500 mt-0.5">Exercises</p>
           </div>
@@ -85,14 +85,14 @@ export default function WorkoutSummaryModal({
         <div className="p-4 border-t border-white/[0.06] space-y-2">
           <button
             onClick={onSave}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold py-2.5 transition flex items-center justify-center gap-2"
+            className="w-full btn-accent text-xs py-2.5 flex items-center justify-center gap-2"
           >
             <CheckCircle2 className="w-4 h-4" />
             Save & Close
           </button>
           <button
             onClick={onDiscard}
-            className="w-full bg-transparent border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs font-semibold py-2.5 transition"
+            className="w-full bg-transparent border border-(--accent-line) text-(--accent) hover:bg-(--accent-soft) text-xs font-semibold py-2.5 transition"
           >
             Discard Workout
           </button>

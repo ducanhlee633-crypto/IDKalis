@@ -11,12 +11,12 @@ import { MUSCLE_FOCUS_DATA } from "@/data/mockCalisthenicsData";
  * - Anatomically accurate muscle bellies with organic curvature (Pecs, 6-Pack, Obliques, Quads, Teardrops, Lats, Traps, Glutes, Calves)
  * - Athletic human silhouette with natural head, neck, hands, joints, and feet
  * - Multi-head muscle rendering for Shoulders (Anterior/Lateral/Posterior delts), Quads (Rectus femoris + Vastus lateralis/medialis), Back (Traps, Lats, Rhomboids/Teres, Erectors), Arms (Biceps, Triceps horseshoe, Forearm flexors/extensors)
- * - High-tech cyberpunk / dark-fitness HUD aesthetics with cyan glow, subtle depth gradients, and skeletal reference lines
+ * - High-tech dark-fitness HUD aesthetics with red glow, subtle depth gradients, and skeletal reference lines
  * - High performance event delegation and ref-based tooltip tracking (60fps hover without re-rendering)
  */
 
-const ACCENT_CYAN = "#00e5ff";
-const ACCENT_GLOW = "#22d3ee";
+const ACCENT_CYAN = "#ff4d4d";
+const ACCENT_GLOW = "#ff6b6b";
 
 const MUSCLE_BY_ID = Object.fromEntries(MUSCLE_FOCUS_DATA.map((m) => [m.id, m]));
 
@@ -329,7 +329,7 @@ const MuscleGroupLayer = memo(function MuscleGroupLayer({
     transition: "all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)",
     cursor: "pointer",
     filter: active
-      ? "drop-shadow(0 0 12px rgba(0, 229, 255, 0.75))"
+      ? "drop-shadow(0 0 12px rgba(255, 77, 77, 0.6))"
       : "drop-shadow(0 1px 2px rgba(0,0,0,0.4))",
   };
 
@@ -524,7 +524,7 @@ export default function BodyModelViewer({
               onClick={() => setActiveTab(tab.key)}
               className={`px-2.5 py-0.5 rounded-sm transition ${
                 activeTab === tab.key
-                  ? "bg-cyan-400/20 text-cyan-300 font-semibold shadow-[inset_0_0_0_1px_rgba(0,229,255,0.4)]"
+                  ? "bg-(--accent-soft) text-(--accent) font-semibold"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
@@ -536,8 +536,8 @@ export default function BodyModelViewer({
         {/* Active Badge */}
         <div className="min-w-[140px] flex justify-end">
           {activeData ? (
-            <div className="flex items-center gap-1.5 bg-cyan-400/10 border border-cyan-400/40 px-2.5 py-0.5 rounded text-[10px] text-cyan-300 font-semibold uppercase shadow-[0_0_10px_rgba(0,229,255,0.2)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00e5ff] shadow-[0_0_6px_#00e5ff] animate-ping" />
+            <div className="flex items-center gap-1.5 bg-(--accent-soft) border border-(--accent-line) px-2.5 py-0.5 text-[10px] text-(--accent) font-semibold uppercase">
+              <span className="led led-live" />
               <span>
                 {activeData.name} · {activeData.percentage}%
               </span>
@@ -572,15 +572,15 @@ export default function BodyModelViewer({
 
             {/* Active Muscle Gradient (Glowing Cyan/Teal) */}
             <linearGradient id="muscle-active-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#00e5ff" />
-              <stop offset="60%" stopColor="#0891b2" />
-              <stop offset="100%" stopColor="#0e7490" />
+              <stop offset="0%" stopColor="#ff4d4d" />
+              <stop offset="60%" stopColor="#b32424" />
+              <stop offset="100%" stopColor="#7a1616" />
             </linearGradient>
 
             {/* Ambient Body Core Glow */}
             <radialGradient id="body-ambient-glow" cx="0.5" cy="0.4" r="0.6">
-              <stop offset="0%" stopColor="#00e5ff" stopOpacity="0.12" />
-              <stop offset="60%" stopColor="#00e5ff" stopOpacity="0.03" />
+              <stop offset="0%" stopColor="#ff4d4d" stopOpacity="0.12" />
+              <stop offset="60%" stopColor="#ff4d4d" stopOpacity="0.03" />
               <stop offset="100%" stopColor="#000000" stopOpacity="0" />
             </radialGradient>
 
@@ -606,9 +606,9 @@ export default function BodyModelViewer({
           style={{ opacity: 0 }}
         >
           {activeData && (
-            <div className="bg-[#14141a]/95 backdrop-blur-md border border-cyan-400/30 px-3 py-2.5 rounded-lg shadow-2xl shadow-black/80 w-48 animate-fade-in">
+            <div className="bg-[#14141a]/95 backdrop-blur-md border border-(--accent-line) px-3 py-2.5 w-48 animate-fade-in">
               <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00e5ff] shadow-[0_0_6px_#00e5ff]" />
+                <span className="led" />
                 <span className="text-[11px] font-bold tracking-wider text-white">
                   {activeData.name}
                 </span>
@@ -620,7 +620,7 @@ export default function BodyModelViewer({
                 <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-semibold">
                   {activeData.skillsCategory}
                 </span>
-                <span className="text-xs font-mono text-cyan-300 font-bold">
+                <span className="font-display text-xs text-(--accent) font-bold">
                   {activeData.percentage}%
                 </span>
               </div>
@@ -632,7 +632,7 @@ export default function BodyModelViewer({
       {/* Footer Caption */}
       <div className="w-full flex items-center justify-between text-[11px] text-zinc-400 px-2 mt-1 border-t border-white/5 pt-1.5 h-6">
         <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]" />
+          <span className="w-2 h-2 bg-(--accent)" />
           <span className="text-zinc-400 text-[10px]">
             {activeData
               ? `${activeData.name} · ${activeData.percentage}% volume`

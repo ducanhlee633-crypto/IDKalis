@@ -26,7 +26,7 @@ function CircularProgressRing({ progress, size = 38, strokeWidth = 3 }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#00e5ff"
+          stroke="#ff4d4d"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
@@ -65,7 +65,7 @@ export default function SkillProgressTable() {
       id: "planche",
       name: "Planche",
       variation: "Straddle Hold",
-      icon: <Award className="w-4 h-4 text-amber-400" />,
+      icon: <Award className="w-4 h-4 text-(--muted)" />,
       current: "6.0s",
       previous: "4.5s",
       progressDelta: "↑ 33%",
@@ -77,7 +77,7 @@ export default function SkillProgressTable() {
       id: "front-lever",
       name: "Front Lever",
       variation: "Full Lever Hold",
-      icon: <Trophy className="w-4 h-4 text-cyan-400" />,
+      icon: <Trophy className="w-4 h-4 text-(--muted)" />,
       current: "8.0s",
       previous: "6.0s",
       progressDelta: "↑ 33%",
@@ -89,7 +89,7 @@ export default function SkillProgressTable() {
       id: "hspu",
       name: "Handstand Push-Up",
       variation: "Strict",
-      icon: <HandstandIcon className="w-4 h-4 text-cyan-400" />,
+      icon: <HandstandIcon className="w-4 h-4 text-(--muted)" />,
       current: "5 reps",
       previous: "4 reps",
       progressDelta: "↑ 25%",
@@ -101,7 +101,7 @@ export default function SkillProgressTable() {
       id: "muscle-up",
       name: "Muscle-Up",
       variation: "Strict",
-      icon: <Trophy className="w-4 h-4 text-amber-400" />,
+      icon: <Trophy className="w-4 h-4 text-(--muted)" />,
       current: "8 reps",
       previous: "6 reps",
       progressDelta: "↑ 33%",
@@ -113,7 +113,7 @@ export default function SkillProgressTable() {
       id: "dragon-flag",
       name: "Dragon Flag",
       variation: "Full Extension",
-      icon: <Flag className="w-4 h-4 text-rose-400" />,
+      icon: <Flag className="w-4 h-4 text-(--muted)" />,
       current: "12 reps",
       previous: "10 reps",
       progressDelta: "↑ 20%",
@@ -124,7 +124,7 @@ export default function SkillProgressTable() {
   ];
 
   return (
-    <div className="bg-[#111114] border border-[#1f1f26] rounded-xl p-5 flex flex-col justify-between relative shadow-sm">
+    <div className="bg-(--surface) border border-(--line) p-5 flex flex-col justify-between relative square-frame">
       {/* Top Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1.5">
@@ -140,7 +140,7 @@ export default function SkillProgressTable() {
               <Info className="w-3.5 h-3.5" />
             </button>
             {showInfo && (
-              <div className="absolute left-0 top-6 w-64 bg-[#1a1a22] border border-white/10 p-2.5 rounded-lg text-[11px] text-zinc-300 shadow-xl z-50 animate-fade-in">
+              <div className="absolute left-0 top-6 w-64 bg-(--surface-2) border border-(--line-strong) p-2.5 text-[11px] text-zinc-300 shadow-xl z-50 animate-fade-in">
                 Key isometric and dynamic calisthenics skill progressions comparing your latest recorded PRs with previous benchmarks.
               </div>
             )}
@@ -166,11 +166,11 @@ export default function SkillProgressTable() {
                 {/* Skill Column */}
                 <td className="py-3.5 pr-4">
                   <div className="flex items-center gap-3">
-                    <div className="shrink-0 p-1.5 bg-[#17171e] border border-white/5 rounded-lg">
+                    <div className="shrink-0 p-1.5 bg-(--surface-2) border border-(--line)">
                       {item.icon}
                     </div>
                     <div>
-                      <p className="font-bold text-zinc-100 group-hover:text-cyan-400 transition-colors">
+                      <p className="font-bold text-zinc-100 group-hover:text-(--accent) transition-colors">
                         {item.name}
                       </p>
                       <p className="text-[11px] text-zinc-400">{item.variation}</p>
@@ -189,7 +189,7 @@ export default function SkillProgressTable() {
                 </td>
 
                 {/* Progress % Column */}
-                <td className="py-3.5 px-3 font-semibold text-emerald-400">
+                <td className="py-3.5 px-3 font-semibold text-(--accent)">
                   {item.progressDelta}
                 </td>
 
@@ -213,7 +213,7 @@ export default function SkillProgressTable() {
       <div className="mt-4 pt-3 border-t border-white/[0.04]">
         <button
           onClick={() => setShowAllSkillsModal(true)}
-          className="px-3.5 py-2 bg-[#17171d] hover:bg-[#202028] border border-[#2a2a34] text-xs font-medium text-zinc-300 hover:text-white rounded-lg transition"
+          className="px-3.5 py-2 btn-ghost text-xs font-medium"
         >
           View all skills
         </button>
@@ -222,10 +222,10 @@ export default function SkillProgressTable() {
       {/* All Skills Modal */}
       {showAllSkillsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-[#121216] border border-[#262630] rounded-xl max-w-xl w-full p-6 shadow-2xl animate-fade-in max-h-[85vh] flex flex-col">
+          <div className="bg-(--surface) border border-(--line-strong) max-w-xl w-full p-6 animate-fade-in max-h-[85vh] flex flex-col square-frame">
             <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-cyan-400" />
+                <Sparkles className="w-5 h-5 text-(--accent)" />
                 <h3 className="text-base font-bold text-white">Full Calisthenics Skill Tree</h3>
               </div>
               <button
@@ -243,7 +243,7 @@ export default function SkillProgressTable() {
                   id: "maltese",
                   name: "Maltese Cross Prep",
                   variation: "Lean (Angle 45°)",
-                  icon: <Award className="w-4 h-4 text-purple-400" />,
+                  icon: <Award className="w-4 h-4 text-(--muted)" />,
                   current: "4.0s",
                   previous: "2.0s",
                   progressDelta: "↑ 50%",
@@ -255,7 +255,7 @@ export default function SkillProgressTable() {
                   id: "v-sit",
                   name: "V-Sit / Manna",
                   variation: "High Compression V",
-                  icon: <Award className="w-4 h-4 text-emerald-400" />,
+                  icon: <Award className="w-4 h-4 text-(--muted)" />,
                   current: "10.0s",
                   previous: "7.0s",
                   progressDelta: "↑ 42%",
@@ -267,7 +267,7 @@ export default function SkillProgressTable() {
                   id: "victorian",
                   name: "Victorian Cross Prep",
                   variation: "Elevated Rings",
-                  icon: <Award className="w-4 h-4 text-blue-400" />,
+                  icon: <Award className="w-4 h-4 text-(--muted)" />,
                   current: "3.5s",
                   previous: "2.0s",
                   progressDelta: "↑ 75%",
@@ -278,10 +278,10 @@ export default function SkillProgressTable() {
               ].map((s) => (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between p-3 bg-[#17171e] rounded-lg border border-white/5"
+                  className="flex items-center justify-between p-3 bg-(--surface-2) border border-(--line)"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-[#20202a] rounded-md">{s.icon}</div>
+                    <div className="p-1.5 bg-(--surface-2) border border-(--line)">{s.icon}</div>
                     <div>
                       <p className="font-bold text-zinc-100">{s.name}</p>
                       <p className="text-[11px] text-zinc-400">{s.variation}</p>
@@ -289,7 +289,7 @@ export default function SkillProgressTable() {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="font-semibold text-cyan-400">{s.current}</p>
+                      <p className="font-semibold text-(--accent)">{s.current}</p>
                       <p className="text-[10px] text-zinc-400">{s.progressDelta}</p>
                     </div>
                     <CircularProgressRing progress={s.percentage} />
@@ -300,7 +300,7 @@ export default function SkillProgressTable() {
 
             <button
               onClick={() => setShowAllSkillsModal(false)}
-              className="w-full py-2 bg-white hover:bg-zinc-200 text-black font-semibold text-xs rounded-lg transition shrink-0"
+              className="w-full py-2 bg-white hover:bg-zinc-200 text-black font-semibold text-xs transition shrink-0"
             >
               Close
             </button>

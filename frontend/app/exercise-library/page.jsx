@@ -1,15 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { EXERCISE_LIBRARY, MUSCLE_GROUPS } from "@/data/mockCalisthenicsData";
+import { MUSCLE_GROUPS } from "@/data/mockCalisthenicsData";
 import { Plus, X, Search, Library, Save, Check, ChevronDown } from "lucide-react";
+
+const API_BASE = "http://localhost:8000";
 
 export default function ExerciseLibraryPage() {
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
-  const [exercises, setExercises] = useState(EXERCISE_LIBRARY);
+  const [exercises, setExercises] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [openPicker, setOpenPicker] = useState(null); // "primary" | "secondary" | null
   const [pickerAnchor, setPickerAnchor] = useState(null); // { left, top, width }
   const [muscleSearch, setMuscleSearch] = useState("");
@@ -24,6 +29,26 @@ export default function ExerciseLibraryPage() {
   });
 
   const categories = ["ALL", "PUSH", "PULL", "LEGS", "CORE"];
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/api/exercises`);
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setExercises(data);
+      } catch (err) {
+        if (!cancelled) setLoadError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredExercises = exercises.filter((ex) => {
     const matchesFilter = filter === "ALL" || ex.movementType === filter;
@@ -61,12 +86,11 @@ export default function ExerciseLibraryPage() {
     setMuscleSearch("");
   };
 
-  const handleAddExercise = (e) => {
+  const handleAddExercise = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || form.primaryMuscles.length === 0) return;
 
     const newExercise = {
-      id: `lib-${Date.now()}`,
       name: form.name.trim(),
       description: form.description.trim(),
       primaryMuscles: form.primaryMuscles,
@@ -75,16 +99,30 @@ export default function ExerciseLibraryPage() {
       inputType: form.inputType,
     };
 
-    setExercises((prev) => [newExercise, ...prev]);
-    setForm({
-      name: "",
-      description: "",
-      primaryMuscles: [],
-      secondaryMuscles: [],
-      movementType: "PUSH",
-      inputType: "note",
-    });
-    setIsModalOpen(false);
+    setIsSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/exercises`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newExercise),
+      });
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const saved = await res.json();
+      setExercises((prev) => [saved, ...prev]);
+      setForm({
+        name: "",
+        description: "",
+        primaryMuscles: [],
+        secondaryMuscles: [],
+        movementType: "PUSH",
+        inputType: "note",
+      });
+      setIsModalOpen(false);
+    } catch (err) {
+      setLoadError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const inputTypeLabel = {
@@ -98,18 +136,18 @@ export default function ExerciseLibraryPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-100 tracking-tight flex items-center gap-2.5">
-            <Library className="w-6 h-6 text-cyan-400" />
+          <h1 className="font-display text-2xl font-semibold text-zinc-50 tracking-tight flex items-center gap-2.5">
+            <Library className="w-6 h-6 text-(--accent)" />
             Exercise Library
           </h1>
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="text-xs text-(--muted) mt-1">
             All exercises with descriptions, primary & secondary muscles, and movement classification.
           </p>
         </div>
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-4 py-2 transition active:scale-[0.98]"
+          className="flex items-center gap-2 btn-accent text-xs px-4 py-2 active:scale-[0.98]"
         >
           <Plus className="w-4 h-4" />
           <span>Add Exercise to the Library</span>
@@ -118,13 +156,13 @@ export default function ExerciseLibraryPage() {
 
       {/* Search + Category Pills */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex items-center gap-2 bg-[#141418] border border-white/5 px-3 py-2 w-full sm:max-w-xs">
+        <div className="flex items-center gap-2 bg-(--surface) border border-(--line) px-3 py-2 w-full sm:max-w-xs">
           <Search className="w-4 h-4 text-zinc-500" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search exercises or muscles..."
-            className="bg-transparent outline-none text-xs text-zinc-200 w-full placeholder:text-zinc-500"
+            className="bg-transparent outline-none text-xs text-zinc-200 w-full placeholder:text-(--faint)"
           />
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -134,8 +172,8 @@ export default function ExerciseLibraryPage() {
               onClick={() => setFilter(cat)}
               className={`px-3.5 py-1.5 text-xs font-medium transition ${
                 filter === cat
-                  ? "bg-cyan-400/15 border border-cyan-400/30 text-cyan-400 shadow-[0_0_8px_rgba(0,229,255,0.2)]"
-                  : "bg-[#141418] border border-white/5 text-zinc-400 hover:text-zinc-200"
+                  ? "bg-(--accent-soft) border border-(--accent-line) text-(--accent)"
+                  : "bg-(--surface) border border-(--line) text-(--muted) hover:text-zinc-200"
               }`}
             >
               {cat}
@@ -148,8 +186,19 @@ export default function ExerciseLibraryPage() {
       </div>
 
       {/* Exercise Cards Grid */}
-      {filteredExercises.length === 0 ? (
-        <div className="bg-[#121215] border border-[#222228] p-10 text-center square-frame">
+      {loading ? (
+        <div className="bg-(--surface) border border-(--line) p-10 text-center square-frame">
+          <p className="text-sm text-zinc-400">Loading exercises...</p>
+        </div>
+      ) : loadError ? (
+        <div className="bg-(--surface) border border-(--accent-line) p-10 text-center square-frame">
+          <p className="text-sm text-(--accent)">Failed to load exercises: {loadError}</p>
+          <p className="text-xs text-zinc-500 mt-2">
+            Make sure the FastAPI backend is running on {API_BASE}.
+          </p>
+        </div>
+      ) : filteredExercises.length === 0 ? (
+        <div className="bg-(--surface) border border-(--line) p-10 text-center square-frame">
           <p className="text-sm text-zinc-400">No exercises match your search.</p>
         </div>
       ) : (
@@ -157,24 +206,24 @@ export default function ExerciseLibraryPage() {
           {filteredExercises.map((ex) => (
             <div
               key={ex.id}
-              className="bg-[#121215] border border-[#222228] p-5 square-frame hover:border-zinc-700 transition flex flex-col"
+              className="bg-(--surface) border border-(--line) p-5 square-frame hover:bg-(--surface-2) transition flex flex-col"
             >
               <div className="flex items-start justify-between mb-2.5">
                 <div className="flex items-center gap-2">
                   <span
                     className={`text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 border ${
                       ex.movementType === "PUSH"
-                        ? "text-blue-400 border-blue-400/30 bg-blue-400/10"
+                        ? "text-(--muted) border-(--line) bg-(--surface-3)"
                         : ex.movementType === "PULL"
-                        ? "text-cyan-400 border-cyan-400/30 bg-cyan-400/10"
+                        ? "text-(--muted) border-(--line) bg-(--surface-3)"
                         : ex.movementType === "LEGS"
-                        ? "text-emerald-400 border-emerald-400/30 bg-emerald-400/10"
-                        : "text-amber-400 border-amber-400/30 bg-amber-400/10"
+                        ? "text-(--muted) border-(--line) bg-(--surface-3)"
+                        : "text-(--muted) border-(--line) bg-(--surface-3)"
                     }`}
                   >
                     {ex.movementType}
                   </span>
-                  <span className="text-[10px] font-medium text-zinc-500 border border-white/5 bg-[#1c1c24] px-2 py-0.5">
+                  <span className="text-[10px] font-medium text-(--faint) border border-(--line) bg-(--surface-3) px-2 py-0.5">
                     {inputTypeLabel[ex.inputType] || ex.inputType}
                   </span>
                 </div>
@@ -191,7 +240,7 @@ export default function ExerciseLibraryPage() {
                   </span>
                   <div className="flex flex-wrap gap-1">
                     {ex.primaryMuscles.map((m) => (
-                      <span key={m} className="px-1.5 py-0.5 bg-blue-400/10 border border-blue-400/25 text-blue-400 text-[10px] font-medium">
+                      <span key={m} className="px-1.5 py-0.5 bg-(--surface-3) border border-(--line-strong) text-(--muted) text-[10px] font-medium">
                         {m}
                       </span>
                     ))}
@@ -203,7 +252,7 @@ export default function ExerciseLibraryPage() {
                   </span>
                   <div className="flex flex-wrap gap-1">
                     {ex.secondaryMuscles.map((m) => (
-                      <span key={m} className="px-1.5 py-0.5 bg-zinc-700/30 border border-white/5 text-zinc-400 text-[10px] font-medium">
+                      <span key={m} className="px-1.5 py-0.5 bg-(--surface-3) border border-(--line) text-(--faint) text-[10px] font-medium">
                         {m}
                       </span>
                     ))}
@@ -218,7 +267,7 @@ export default function ExerciseLibraryPage() {
       {/* Add Exercise Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-[#121215] border border-[#26262e] w-full max-w-lg square-frame max-h-[90vh] overflow-y-auto">
+          <div className="bg-(--surface) border border-(--line-strong) w-full max-w-lg square-frame max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-5 pb-3">
               <h2 className="text-base font-bold text-zinc-100">Add Exercise</h2>
               <button
@@ -231,7 +280,7 @@ export default function ExerciseLibraryPage() {
 
             <form onSubmit={handleAddExercise} className="p-5 pt-2 space-y-4">
               <div>
-                <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+                <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
                   Exercise Name *
                 </label>
                 <input
@@ -240,12 +289,12 @@ export default function ExerciseLibraryPage() {
                   onChange={handleInputChange}
                   required
                   placeholder="e.g. Archer Push-Up"
-                  className="w-full bg-[#0d0d10] border border-white/10 px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-cyan-400/40 transition"
+                  className="w-full bg-(--surface-3) border border-(--line-strong) px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-(--faint) focus:border-(--accent-line) transition"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+                <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
                   Description
                 </label>
                 <textarea
@@ -254,13 +303,13 @@ export default function ExerciseLibraryPage() {
                   onChange={handleInputChange}
                   rows={3}
                   placeholder="How to perform the movement..."
-                  className="w-full bg-[#0d0d10] border border-white/10 px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-cyan-400/40 transition resize-none"
+                  className="w-full bg-(--surface-3) border border-(--line-strong) px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-(--faint) focus:border-(--accent-line) transition resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="relative">
-                  <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
                     Primary Muscles *
                   </label>
                   <button
@@ -268,15 +317,15 @@ export default function ExerciseLibraryPage() {
                     onClick={(e) => openMusclePicker("primary", e)}
                     className={`w-full min-h-[36px] flex flex-wrap items-center gap-1.5 bg-[#0d0d10] border px-2.5 py-1.5 text-xs transition ${
                       openPicker === "primary"
-                        ? "border-cyan-400/40"
-                        : "border-white/10 hover:border-white/20"
+                        ? "border-(--accent-line)"
+                        : "border-(--line-strong) hover:border-white/25"
                     }`}
                   >
                     {form.primaryMuscles.length === 0 ? (
                       <span className="text-zinc-600 px-1">Select muscles...</span>
                     ) : (
                       form.primaryMuscles.map((m) => (
-                        <span key={m} className="flex items-center gap-1 bg-blue-400/10 border border-blue-400/25 text-blue-400 px-1.5 py-0.5 text-[10px] font-medium">
+                        <span key={m} className="flex items-center gap-1 bg-(--surface-3) border border-(--line-strong) text-(--muted) px-1.5 py-0.5 text-[10px] font-medium">
                           {m}
                           <span
                             role="button"
@@ -296,7 +345,7 @@ export default function ExerciseLibraryPage() {
                   </button>
                 </div>
                 <div className="relative">
-                  <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
                     Secondary Muscles
                   </label>
                   <button
@@ -304,7 +353,7 @@ export default function ExerciseLibraryPage() {
                     onClick={(e) => openMusclePicker("secondary", e)}
                     className={`w-full min-h-[36px] flex flex-wrap items-center gap-1.5 bg-[#0d0d10] border px-2.5 py-1.5 text-xs transition ${
                       openPicker === "secondary"
-                        ? "border-cyan-400/40"
+                        ? "border-(--accent-line)"
                         : "border-white/10 hover:border-white/20"
                     }`}
                   >
@@ -312,7 +361,7 @@ export default function ExerciseLibraryPage() {
                       <span className="text-zinc-600 px-1">Select muscles...</span>
                     ) : (
                       form.secondaryMuscles.map((m) => (
-                        <span key={m} className="flex items-center gap-1 bg-zinc-700/30 border border-white/10 text-zinc-300 px-1.5 py-0.5 text-[10px] font-medium">
+                        <span key={m} className="flex items-center gap-1 bg-(--surface-3) border border-(--line-strong) text-zinc-300 px-1.5 py-0.5 text-[10px] font-medium">
                           {m}
                           <span
                             role="button"
@@ -335,7 +384,7 @@ export default function ExerciseLibraryPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
                     Movement Type *
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -347,13 +396,13 @@ export default function ExerciseLibraryPage() {
                         className={`px-3 py-2 text-xs font-semibold border transition ${
                           form.movementType === type
                             ? type === "PUSH"
-                              ? "bg-blue-400/15 border-blue-400/40 text-blue-400"
+                              ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
                               : type === "PULL"
-                              ? "bg-cyan-400/15 border-cyan-400/40 text-cyan-400"
+                              ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
                               : type === "LEGS"
-                              ? "bg-emerald-400/15 border-emerald-400/40 text-emerald-400"
-                              : "bg-amber-400/15 border-amber-400/40 text-amber-400"
-                            : "bg-[#0d0d10] border-white/10 text-zinc-400 hover:text-zinc-200"
+                              ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
+                              : "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
+                            : "bg-(--surface-3) border-(--line-strong) text-(--muted) hover:text-zinc-200"
                         }`}
                       >
                         {type}
@@ -362,14 +411,14 @@ export default function ExerciseLibraryPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
                     Input Type
                   </label>
                   <select
                     name="inputType"
                     value={form.inputType}
                     onChange={handleInputChange}
-                    className="w-full bg-[#0d0d10] border border-white/10 px-3 py-2 text-xs text-zinc-200 outline-none focus:border-cyan-400/40 transition"
+                    className="w-full bg-(--surface-3) border border-(--line-strong) px-3 py-2 text-xs text-zinc-200 outline-none focus:border-(--accent-line) transition"
                   >
                     <option value="note">Bodyweight</option>
                     <option value="time">Time Hold</option>
@@ -380,10 +429,11 @@ export default function ExerciseLibraryPage() {
 
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-4 py-2.5 transition active:scale-[0.98] mt-2"
+                disabled={isSaving}
+                className="w-full flex items-center justify-center gap-2 btn-accent disabled:opacity-50 text-xs px-4 py-2.5 mt-2"
               >
                 <Save className="w-4 h-4" />
-                <span>Save to Library</span>
+                <span>{isSaving ? "Saving..." : "Save to Library"}</span>
               </button>
             </form>
           </div>
@@ -434,7 +484,7 @@ function MusclePicker({ selected, used, search, onSearch, onToggle, onClose, anc
     <>
       <div className="fixed inset-0 z-[60]" onClick={onClose} />
       <div
-        className="fixed z-[70] bg-[#16161b] border border-[#2a2a33] square-frame shadow-2xl"
+        className="fixed z-[70] bg-(--surface) border border-(--line-strong) square-frame"
         style={{
           left,
           top: anchor.top + 6,
@@ -448,7 +498,7 @@ function MusclePicker({ selected, used, search, onSearch, onToggle, onClose, anc
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             placeholder="Search muscles..."
-            className="bg-transparent outline-none text-xs text-zinc-200 w-full placeholder:text-zinc-500"
+            className="bg-transparent outline-none text-xs text-zinc-200 w-full placeholder:text-(--faint)"
           />
         </div>
         <div className="max-h-56 overflow-y-auto p-2.5 space-y-3">
@@ -472,10 +522,10 @@ function MusclePicker({ selected, used, search, onSearch, onToggle, onClose, anc
                         disabled={isUsed}
                         className={`flex items-center gap-1.5 px-2 py-1.5 text-[11px] font-medium border transition text-left ${
                           isSelected
-                            ? "bg-cyan-400/10 border-cyan-400/40 text-cyan-400"
+                            ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
                             : isUsed
                             ? "bg-[#0d0d10] border-white/5 text-zinc-600 cursor-not-allowed"
-                            : "bg-[#0d0d10] border-white/10 text-zinc-300 hover:border-zinc-500 hover:text-white"
+                            : "bg-(--surface-3) border-(--line-strong) text-zinc-300 hover:border-zinc-500 hover:text-white"
                         }`}
                       >
                         {isSelected && <Check className="w-3 h-3 shrink-0" />}

@@ -56,7 +56,7 @@ export default function TrainingConsistencyCard() {
   const daysOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
   return (
-    <div className="bg-[#111114] border border-[#1f1f26] rounded-xl p-5 flex flex-col justify-between relative shadow-sm">
+    <div className="bg-(--surface) border border-(--line) p-5 flex flex-col justify-between relative square-frame">
       {/* Top Header */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-1.5">
@@ -72,7 +72,7 @@ export default function TrainingConsistencyCard() {
               <Info className="w-3.5 h-3.5" />
             </button>
             {showInfo && (
-              <div className="absolute left-0 top-6 w-60 bg-[#1a1a22] border border-white/10 p-2.5 rounded-lg text-[11px] text-zinc-300 shadow-xl z-50 animate-fade-in">
+              <div className="absolute left-0 top-6 w-60 bg-[#1a1a22] border border-white/10 p-2.5 text-[11px] text-zinc-300 shadow-xl z-50 animate-fade-in">
                 Overview of completed workouts vs planned rest and missed sessions over the last 4 weeks.
               </div>
             )}
@@ -82,7 +82,7 @@ export default function TrainingConsistencyCard() {
         {/* Details Link */}
         <button
           onClick={() => setShowDetailsModal(true)}
-          className="flex items-center gap-0.5 text-xs text-cyan-400 hover:text-cyan-300 transition font-medium"
+          className="flex items-center gap-0.5 text-xs text-(--accent) hover:text-(--accent-strong) transition font-medium"
         >
           <span>Details</span>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -119,27 +119,27 @@ export default function TrainingConsistencyCard() {
                     >
                       {/* Trained: Solid Glowing Green */}
                       {cell.state === "trained" && (
-                        <div className="w-6 h-6 rounded-full bg-[#10b981] shadow-[0_0_10px_rgba(16,185,129,0.5)] flex items-center justify-center cursor-pointer transition-transform hover:scale-110" />
+                        <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center cursor-pointer transition-transform hover:scale-110" />
                       )}
 
                       {/* Rest / Active Rest: Dark circle with grey dot */}
                       {cell.state === "rest" && (
-                        <div className="w-6 h-6 rounded-full bg-[#181820] border border-[#272732] flex items-center justify-center cursor-pointer transition-transform hover:scale-110">
+                        <div className="w-6 h-6 rounded-full bg-(--surface-3) border border-(--line-strong) flex items-center justify-center cursor-pointer transition-transform hover:scale-110">
                           <div className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
                         </div>
                       )}
 
                       {/* Missed: Dark circle with cross */}
                       {cell.state === "missed" && (
-                        <div className="w-6 h-6 rounded-full bg-[#181820] border border-[#272732] flex items-center justify-center cursor-pointer transition-transform hover:scale-110">
-                          <X className="w-3 h-3 text-zinc-500" />
+                        <div className="w-6 h-6 rounded-full bg-(--surface-3) border border-(--line-strong) flex items-center justify-center cursor-pointer transition-transform hover:scale-110">
+                          <X className="w-3 h-3 text-(--faint)" />
                         </div>
                       )}
 
                       {/* Partial / Modified: Half filled green circle */}
                       {cell.state === "partial" && (
                         <div className="w-6 h-6 rounded-full bg-[#181820] border border-[#272732] overflow-hidden relative flex items-center justify-center cursor-pointer transition-transform hover:scale-110">
-                          <div className="absolute right-0 top-0 w-3 h-6 bg-[#10b981]" />
+                          <div className="absolute right-0 top-0 w-3 h-6 bg-white" />
                         </div>
                       )}
                     </div>
@@ -152,15 +152,15 @@ export default function TrainingConsistencyCard() {
           {/* Bottom Legend */}
           <div className="flex items-center gap-4 text-[10px] text-zinc-400 mt-4 pt-3 border-t border-white/[0.04]">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#10b981]" />
+              <span className="w-2 h-2 rounded-full bg-white" />
               <span>Trained</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-zinc-600" />
+              <span className="w-2 h-2 rounded-full bg-(--faint)" />
               <span>Rest/Active Rest</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <X className="w-2.5 h-2.5 text-zinc-500" />
+              <X className="w-2.5 h-2.5 text-(--faint)" />
               <span>Missed</span>
             </div>
           </div>
@@ -169,7 +169,7 @@ export default function TrainingConsistencyCard() {
         {/* Right Side: Stats Numbers */}
         <div className="md:col-span-4 flex md:flex-col justify-between md:justify-center md:items-start pl-0 md:pl-4 md:border-l border-white/[0.06] space-y-0 md:space-y-4">
           <div>
-            <p className="text-3xl font-bold text-[#10b981] tracking-tight">86%</p>
+            <p className="font-display text-3xl font-bold text-zinc-50 tracking-tight">86%</p>
             <p className="text-xs text-zinc-400 mt-0.5">Consistency</p>
           </div>
 
@@ -189,19 +189,19 @@ export default function TrainingConsistencyCard() {
 
       {/* Hover Tooltip */}
       {hoveredCell && (
-        <div className="absolute bottom-16 left-8 bg-[#181822] border border-[#2b2b36] px-3 py-1.5 rounded-lg shadow-xl text-xs z-30 pointer-events-none animate-fade-in">
+        <div className="absolute bottom-16 left-8 bg-(--surface-2) border border-(--line-strong) px-3 py-1.5 text-xs z-30 pointer-events-none animate-fade-in">
           <span className="font-semibold text-white">{hoveredCell.date}</span>:{" "}
-          <span className="text-cyan-400">{hoveredCell.label}</span>
+          <span className="text-(--accent)">{hoveredCell.label}</span>
         </div>
       )}
 
       {/* Details Modal */}
       {showDetailsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-[#121216] border border-[#262630] rounded-xl max-w-md w-full p-6 shadow-2xl animate-fade-in">
+          <div className="bg-(--surface) border border-(--line-strong) max-w-md w-full p-6 animate-fade-in square-frame">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <CalendarCheck className="w-5 h-5 text-emerald-400" />
+                <CalendarCheck className="w-5 h-5 text-zinc-100" />
                 <h3 className="text-base font-bold text-white">Monthly Consistency Breakdown</h3>
               </div>
               <button
@@ -214,21 +214,21 @@ export default function TrainingConsistencyCard() {
 
             <div className="mt-4 space-y-4 text-xs">
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-[#17171e] p-3 rounded-lg border border-white/5">
+                <div className="bg-(--surface-2) p-3 border border-(--line)">
                   <p className="text-zinc-400">Total Workouts</p>
-                  <p className="text-lg font-bold text-emerald-400 mt-1">24</p>
+                  <p className="text-lg font-bold text-zinc-50 mt-1">24</p>
                 </div>
-                <div className="bg-[#17171e] p-3 rounded-lg border border-white/5">
+                <div className="bg-(--surface-2) p-3 border border-(--line)">
                   <p className="text-zinc-400">Rest Days</p>
                   <p className="text-lg font-bold text-zinc-300 mt-1">10</p>
                 </div>
-                <div className="bg-[#17171e] p-3 rounded-lg border border-white/5">
+                <div className="bg-(--surface-2) p-3 border border-(--line)">
                   <p className="text-zinc-400">Missed</p>
-                  <p className="text-lg font-bold text-rose-400 mt-1">4</p>
+                  <p className="text-lg font-bold text-(--accent) mt-1">4</p>
                 </div>
               </div>
 
-              <div className="p-3 bg-[#17171e] rounded-lg border border-white/5">
+              <div className="p-3 bg-(--surface-2) border border-(--line)">
                 <p className="font-semibold text-zinc-200 mb-1">Consistency Score Insight</p>
                 <p className="text-zinc-400 leading-relaxed">
                   You are in the top 8% of athletes maintaining over 85% monthly consistency. Your 12-day consecutive streak occurred between Week 2 and Week 3.
@@ -238,7 +238,7 @@ export default function TrainingConsistencyCard() {
 
             <button
               onClick={() => setShowDetailsModal(false)}
-              className="mt-5 w-full py-2 bg-white hover:bg-zinc-200 text-black font-semibold text-xs rounded-lg transition"
+              className="mt-5 w-full py-2 bg-white hover:bg-zinc-200 text-black font-semibold text-xs transition"
             >
               Close
             </button>

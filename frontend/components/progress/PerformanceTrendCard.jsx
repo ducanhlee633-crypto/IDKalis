@@ -159,7 +159,7 @@ export default function PerformanceTrendCard() {
   const latestPoint = coords[coords.length - 1];
 
   return (
-    <div className="bg-[#111114] border border-[#1f1f26] rounded-xl p-5 flex flex-col justify-between relative shadow-sm">
+    <div className="bg-(--surface) border border-(--line) p-5 flex flex-col justify-between relative square-frame">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5">
@@ -175,7 +175,7 @@ export default function PerformanceTrendCard() {
               <Info className="w-3.5 h-3.5" />
             </button>
             {showInfo && (
-              <div className="absolute left-0 top-6 w-60 bg-[#1a1a22] border border-white/10 p-2.5 rounded-lg text-[11px] text-zinc-300 shadow-xl z-50 animate-fade-in">
+              <div className="absolute left-0 top-6 w-60 bg-(--surface-2) border border-(--line-strong) p-2.5 text-[11px] text-zinc-300 shadow-xl z-50 animate-fade-in">
                 Tracks clean isometric hold duration or strict reps over time across your training sessions.
               </div>
             )}
@@ -186,7 +186,7 @@ export default function PerformanceTrendCard() {
         <div className="relative">
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#17171d] hover:bg-[#202028] border border-[#2a2a34] text-xs font-medium text-zinc-200 rounded-md transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 btn-ghost text-xs font-medium"
           >
             <span>{currentSkill.name}</span>
             <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
@@ -198,7 +198,7 @@ export default function PerformanceTrendCard() {
                 className="fixed inset-0 z-40"
                 onClick={() => setIsDropdownOpen(false)}
               />
-              <div className="absolute right-0 mt-1.5 w-48 bg-[#17171d] border border-[#2a2a34] rounded-lg shadow-2xl z-50 py-1 backdrop-blur-xl animate-fade-in">
+              <div className="absolute right-0 mt-1.5 w-48 bg-(--surface) border border-(--line-strong) z-50 py-1 backdrop-blur-xl animate-fade-in">
                 {Object.entries(SKILL_DATA).map(([key, item]) => (
                   <button
                     key={key}
@@ -210,7 +210,7 @@ export default function PerformanceTrendCard() {
                   >
                     <span>{item.name}</span>
                     {selectedSkillKey === key && (
-                      <Check className="w-3.5 h-3.5 text-cyan-400" />
+                      <Check className="w-3.5 h-3.5 text-(--accent)" />
                     )}
                   </button>
                 ))}
@@ -222,7 +222,7 @@ export default function PerformanceTrendCard() {
 
       {/* Subheader / Metric Label */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="w-2.5 h-1 bg-cyan-400 rounded-full" />
+        <span className="w-4 h-px bg-(--accent)" />
         <span className="text-xs text-zinc-400">
           {currentSkill.name} ({currentSkill.unit})
         </span>
@@ -238,10 +238,10 @@ export default function PerformanceTrendCard() {
         >
           <defs>
             {/* Cyan glowing gradient fill */}
-            <linearGradient id="cyanAreaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#00e5ff" stopOpacity="0.25" />
-              <stop offset="60%" stopColor="#00e5ff" stopOpacity="0.08" />
-              <stop offset="100%" stopColor="#00e5ff" stopOpacity="0.0" />
+            <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ff4d4d" stopOpacity="0.25" />
+              <stop offset="60%" stopColor="#ff4d4d" stopOpacity="0.08" />
+              <stop offset="100%" stopColor="#ff4d4d" stopOpacity="0.0" />
             </linearGradient>
 
             {/* Glowing filter */}
@@ -284,13 +284,13 @@ export default function PerformanceTrendCard() {
           })}
 
           {/* Area Gradient Fill */}
-          <path d={areaD} fill="url(#cyanAreaGradient)" />
+          <path d={areaD} fill="url(#areaGradient)" />
 
           {/* Glowing Line */}
           <path
             d={pathD}
             fill="none"
-            stroke="#00e5ff"
+            stroke="#ff4d4d"
             strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -309,7 +309,7 @@ export default function PerformanceTrendCard() {
                   cx={pt.xCoord}
                   cy={pt.yCoord}
                   r={isHovered || isLast ? 4 : 2.5}
-                  fill="#00e5ff"
+                  fill="#ff4d4d"
                   className="transition-all duration-150 cursor-pointer"
                   onMouseEnter={() => setHoveredPoint(pt)}
                   onMouseLeave={() => setHoveredPoint(null)}
@@ -320,7 +320,7 @@ export default function PerformanceTrendCard() {
                     cy={pt.yCoord}
                     r={7}
                     fill="none"
-                    stroke="#00e5ff"
+                    stroke="#ff4d4d"
                     strokeWidth="1.5"
                     strokeOpacity="0.5"
                   />
@@ -339,7 +339,7 @@ export default function PerformanceTrendCard() {
             marginTop: "-12px",
           }}
         >
-          <div className="bg-[#15151b]/95 border border-[#2b2b36] shadow-[0_4px_16px_rgba(0,0,0,0.6)] px-2.5 py-1.5 rounded-lg text-center backdrop-blur-md">
+          <div className="bg-(--surface-2)/95 border border-(--line-strong) px-2.5 py-1.5 text-center backdrop-blur-md">
             <p className="text-xs font-bold text-white leading-tight">
               {(hoveredPoint || latestPoint).label || `${(hoveredPoint || latestPoint).value}${currentSkill.unit}`}
             </p>

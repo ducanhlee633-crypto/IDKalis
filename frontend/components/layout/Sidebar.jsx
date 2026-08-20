@@ -20,8 +20,11 @@ import {
   Library,
   Menu,
   X,
+  LogOut,
+  LogIn,
 } from "lucide-react";
 import { USER_PROFILE } from "@/data/mockCalisthenicsData";
+import { useAuth } from "@/components/auth/AuthContext";
 
 const overviewLinks = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -39,9 +42,12 @@ const trackingLinks = [
 function NavSection({ label, links, isActive, onNavigate }) {
   return (
     <div className="space-y-1">
-      <p className="px-3 text-[10px] font-semibold text-zinc-500 tracking-wider uppercase mb-1.5">
-        {label}
-      </p>
+      <div className="flex items-center gap-2 px-3 mb-1.5">
+        <span className="w-4 h-px bg-(--accent)" />
+        <p className="text-[10px] font-semibold text-(--faint) tracking-[0.18em] uppercase">
+          {label}
+        </p>
+      </div>
       <nav className="space-y-0.5">
         {links.map((item) => {
           const active = isActive(item.href);
@@ -51,15 +57,15 @@ function NavSection({ label, links, isActive, onNavigate }) {
               key={item.name}
               href={item.href}
               onClick={onNavigate}
-              className={`flex items-center gap-3 px-3 py-2 text-xs font-medium transition-all ${
+              className={`flex items-center gap-3 pl-3 pr-3 py-2 text-xs font-medium border-l-2 transition-all ${
                 active
-                  ? "bg-[#1c1c22] text-zinc-100 border border-white/10 shadow-inner"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.03]"
+                  ? "border-(--accent) text-zinc-100 bg-white/[0.03]"
+                  : "border-transparent text-(--muted) hover:text-zinc-200 hover:bg-white/[0.03]"
               }`}
             >
               <Icon
                 className={`w-4 h-4 ${
-                  active ? "text-cyan-400" : "text-zinc-500 group-hover:text-zinc-300"
+                  active ? "text-(--accent)" : "text-(--faint)"
                 }`}
               />
               <span>{item.name}</span>
@@ -71,7 +77,17 @@ function NavSection({ label, links, isActive, onNavigate }) {
   );
 }
 
-function SidebarContent({ isActive, onUpgradeOpen, onCloseClick, onNavigate, closeButton = false }) {
+function SidebarContent({ isActive, onUpgradeOpen, onCloseClick, onNavigate, closeButton = false, user, onLogout }) {
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const initials = (user?.username || USER_PROFILE.name)
+    .split(/[\s_]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+
+  const displayName = user?.username || USER_PROFILE.name;
+  const displayEmail = user ? "IDK account" : USER_PROFILE.email;
   return (
     <>
       {/* Top Section: Brand & Navigation */}
@@ -79,14 +95,14 @@ function SidebarContent({ isActive, onUpgradeOpen, onCloseClick, onNavigate, clo
         {/* Brand Logo & Close/Collapse */}
         <div className="flex items-center justify-between px-2 pt-1">
           <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-400 flex items-center justify-center text-black font-extrabold text-lg shadow-[0_0_12px_rgba(0,229,255,0.4)]">
+            <div className="w-8 h-8 bg-(--surface-2) border border-(--accent-line) flex items-center justify-center text-(--text) font-display font-bold text-lg group-hover:border-(--accent) transition">
               I
             </div>
             <div className="flex flex-col">
-              <span className="text-base font-bold text-white tracking-widest uppercase font-mono">
+              <span className="text-base font-display font-bold text-white tracking-[0.22em] uppercase leading-none">
                 IDK
               </span>
-              <span className="text-[9px] text-cyan-400 font-medium tracking-wider uppercase -mt-1">
+              <span className="text-[9px] text-(--faint) font-medium tracking-[0.18em] uppercase mt-0.5">
                 Calisthenics
               </span>
             </div>
@@ -112,26 +128,42 @@ function SidebarContent({ isActive, onUpgradeOpen, onCloseClick, onNavigate, clo
         </div>
 
         {/* OVERVIEW Section */}
-        <NavSection label="Overview" links={overviewLinks} isActive={isActive} onNavigate={onNavigate} />
+        <NavSection
+          label="Overview"
+          links={overviewLinks}
+          isActive={isActive}
+          onNavigate={() => {
+            setIsAccountOpen(false);
+            onNavigate?.();
+          }}
+        />
 
         {/* TRACKING Section */}
-        <NavSection label="Tracking" links={trackingLinks} isActive={isActive} onNavigate={onNavigate} />
+        <NavSection
+          label="Tracking"
+          links={trackingLinks}
+          isActive={isActive}
+          onNavigate={() => {
+            setIsAccountOpen(false);
+            onNavigate?.();
+          }}
+        />
       </div>
 
       {/* Bottom Section: Pro Banner + Settings + Profile */}
       <div className="space-y-4 pt-4">
-        {/* Unlock Pro Banner (Styled exactly like workout_ui.webp) */}
-        <div className="relative bg-[#15151a] border border-[#26262e] p-4 square-frame">
-          <div className="w-7 h-7 bg-[#1f1f26] border border-white/10 flex items-center justify-center mb-2.5 text-zinc-300">
-            <Crown className="w-4 h-4 text-amber-400" />
+        {/* Unlock Pro Banner */}
+        <div className="relative bg-(--surface) border border-(--line) p-4 square-frame">
+          <div className="w-7 h-7 bg-(--surface-2) border border-(--line) flex items-center justify-center mb-2.5">
+            <Crown className="w-4 h-4 text-(--muted)" />
           </div>
           <h4 className="text-xs font-semibold text-zinc-100 mb-1">Unlock your best you</h4>
-          <p className="text-[11px] text-zinc-400 leading-relaxed mb-3">
+          <p className="text-[11px] text-(--muted) leading-relaxed mb-3">
             Upgrade to premium for personalized calisthenics skills, advanced analytics & more.
           </p>
           <button
             onClick={onUpgradeOpen}
-            className="w-full bg-white hover:bg-zinc-200 text-black text-xs font-semibold py-2 px-3 transition shadow-md active:scale-95"
+            className="w-full btn-white text-xs py-2 px-3 active:scale-95"
           >
             Upgrade now
           </button>
@@ -139,28 +171,63 @@ function SidebarContent({ isActive, onUpgradeOpen, onCloseClick, onNavigate, clo
 
         {/* Secondary Links: Settings & Help Center */}
         <div className="space-y-0.5">
-          <button className="w-full flex items-center gap-3 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.03] transition">
-            <Settings className="w-4 h-4 text-zinc-500" />
+          <button className="w-full flex items-center gap-3 px-3 py-1.5 text-xs text-(--muted) hover:text-zinc-200 hover:bg-white/[0.03] transition">
+            <Settings className="w-4 h-4 text-(--faint)" />
             <span>Settings</span>
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.03] transition">
-            <HelpCircle className="w-4 h-4 text-zinc-500" />
+          <button className="w-full flex items-center gap-3 px-3 py-1.5 text-xs text-(--muted) hover:text-zinc-200 hover:bg-white/[0.03] transition">
+            <HelpCircle className="w-4 h-4 text-(--faint)" />
             <span>Help center</span>
           </button>
         </div>
 
         {/* User Profile Pill Footer */}
-        <div className="flex items-center justify-between p-2 bg-[#141418] border border-white/5 hover:border-white/10 transition cursor-pointer">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 bg-gradient-to-tr from-cyan-400 to-indigo-400 flex items-center justify-center text-white font-bold text-xs ring-2 ring-white/10 shrink-0">
-              ES
+        <div className="relative">
+          <div
+            className="flex items-center justify-between p-2 bg-(--surface-3) border border-(--line) hover:border-(--line-strong) transition cursor-pointer"
+            onClick={() => setIsAccountOpen((v) => !v)}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 bg-(--surface-2) border border-(--line) flex items-center justify-center text-zinc-200 font-display font-bold text-xs">
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-zinc-200 truncate">{displayName}</p>
+                <p className="text-[10px] text-(--faint) truncate">{displayEmail}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-zinc-200 truncate">{USER_PROFILE.name}</p>
-              <p className="text-[10px] text-zinc-500 truncate">{USER_PROFILE.email}</p>
-            </div>
+            <ChevronsUpDown className="w-4 h-4 text-(--faint) shrink-0" />
           </div>
-          <ChevronsUpDown className="w-4 h-4 text-zinc-500 shrink-0" />
+
+          {/* Account Dropdown */}
+          {isAccountOpen && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-(--surface) border border-(--line-strong) py-1.5 z-40 animate-fade-in">
+              {!user ? (
+                <Link
+                  href="/login"
+                  onClick={() => {
+                    setIsAccountOpen(false);
+                    onNavigate?.();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-zinc-300 hover:bg-white/5 transition"
+                >
+                  <LogIn className="w-4 h-4 text-(--accent)" />
+                  <span>Log in / Sign up</span>
+                </Link>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsAccountOpen(false);
+                    onLogout();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-(--accent) hover:bg-(--accent-soft) transition"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Log out</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -169,9 +236,12 @@ function SidebarContent({ isActive, onUpgradeOpen, onCloseClick, onNavigate, clo
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  if (pathname === "/login") return null;
 
   const isActive = (href) => {
     if (href === "/") return pathname === "/";
@@ -180,12 +250,17 @@ export default function Sidebar() {
 
   const closeMobile = () => setIsMobileOpen(false);
 
+  const handleLogout = () => {
+    logout();
+    closeMobile();
+  };
+
   return (
     <>
       {/* Mobile Hamburger Button */}
       <button
         onClick={() => setIsMobileOpen(true)}
-        className="fixed top-4 left-4 z-30 lg:hidden flex items-center justify-center w-9 h-9 bg-[#0d0d0f]/90 backdrop-blur border border-[#1e1e24] text-zinc-300 hover:text-white hover:border-zinc-600 transition"
+        className="fixed top-4 left-4 z-30 lg:hidden flex items-center justify-center w-9 h-9 bg-(--surface-3)/90 backdrop-blur border border-(--line) text-zinc-300 hover:text-white hover:border-(--line-strong) transition"
         aria-label="Open navigation menu"
       >
         <Menu className="w-5 h-5" />
@@ -201,7 +276,7 @@ export default function Sidebar() {
 
       {/* Mobile Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-[#0d0d0f] border-r border-[#1e1e24] flex flex-col justify-between overflow-y-auto select-none shrink-0 transition-transform duration-300 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-(--surface-3) border-r border-(--line) flex flex-col justify-between overflow-y-auto select-none shrink-0 transition-transform duration-300 lg:hidden ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -211,6 +286,8 @@ export default function Sidebar() {
           onCloseClick={closeMobile}
           onNavigate={closeMobile}
           closeButton
+          user={user}
+          onLogout={handleLogout}
         />
       </aside>
 
@@ -220,13 +297,15 @@ export default function Sidebar() {
           isCollapsed
             ? "w-0 p-0 border-r-0 overflow-hidden"
             : "w-64 p-4"
-        } min-h-screen bg-[#0d0d0f] border-r border-[#1e1e24] flex-col justify-between select-none shrink-0 transition-all duration-300`}
+        } min-h-screen bg-(--surface-3) border-r border-(--line) flex-col justify-between select-none shrink-0 transition-all duration-300`}
       >
         {!isCollapsed && (
           <SidebarContent
             isActive={isActive}
             onUpgradeOpen={() => setIsUpgradeModalOpen(true)}
             onCloseClick={() => setIsCollapsed(true)}
+            user={user}
+            onLogout={handleLogout}
           />
         )}
       </aside>

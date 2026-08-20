@@ -24,7 +24,7 @@ function BottleneckGauge({ percentage = 64, size = 48, strokeWidth = 4 }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#2d2212"
+          stroke="rgba(255,77,77,0.15)"
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -32,7 +32,7 @@ function BottleneckGauge({ percentage = 64, size = 48, strokeWidth = 4 }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#f59e0b"
+          stroke="#ff4d4d"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
@@ -41,7 +41,7 @@ function BottleneckGauge({ percentage = 64, size = 48, strokeWidth = 4 }) {
           className="transition-all duration-700 ease-out"
         />
       </svg>
-      <span className="absolute text-xs font-bold text-amber-400">
+      <span className="absolute text-xs font-bold text-(--accent)">
         {percentage}%
       </span>
     </div>
@@ -57,7 +57,7 @@ export default function CurrentBottleneckCard() {
       label: "Strength",
       icon: <Gem className="w-3.5 h-3.5 text-zinc-400" />,
       value: 88,
-      color: "bg-[#10b981]",
+      color: "bg-(--accent)",
       textColor: "text-zinc-200",
     },
     {
@@ -65,23 +65,23 @@ export default function CurrentBottleneckCard() {
       label: "Technique",
       icon: <Layers className="w-3.5 h-3.5 text-zinc-400" />,
       value: 79,
-      color: "bg-[#00e5ff]",
+      color: "bg-white/60",
       textColor: "text-zinc-200",
     },
     {
       id: "endurance",
       label: "Endurance",
-      icon: <Timer className="w-3.5 h-3.5 text-amber-400" />,
+      icon: <Timer className="w-3.5 h-3.5 text-(--muted)" />,
       value: 64,
-      color: "bg-[#f59e0b]",
-      textColor: "text-amber-400",
+      color: "bg-(--accent)",
+      textColor: "text-(--accent)",
     },
     {
       id: "mobility",
       label: "Mobility",
       icon: <ShieldCheck className="w-3.5 h-3.5 text-zinc-400" />,
       value: 81,
-      color: "bg-[#10b981]",
+      color: "bg-(--accent)",
       textColor: "text-zinc-200",
     },
     {
@@ -89,13 +89,13 @@ export default function CurrentBottleneckCard() {
       label: "Consistency",
       icon: <Smile className="w-3.5 h-3.5 text-zinc-400" />,
       value: 93,
-      color: "bg-[#10b981]",
+      color: "bg-(--accent)",
       textColor: "text-zinc-200",
     },
   ];
 
   return (
-    <div className="bg-[#111114] border border-[#1f1f26] rounded-xl p-5 flex flex-col justify-between relative shadow-sm">
+    <div className="bg-(--surface) border border-(--line) p-5 flex flex-col justify-between relative square-frame">
       {/* Top Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1.5">
@@ -111,7 +111,7 @@ export default function CurrentBottleneckCard() {
               <Info className="w-3.5 h-3.5" />
             </button>
             {showInfo && (
-              <div className="absolute left-0 top-6 w-60 bg-[#1a1a22] border border-white/10 p-2.5 rounded-lg text-[11px] text-zinc-300 shadow-xl z-50 animate-fade-in">
+              <div className="absolute left-0 top-6 w-60 bg-(--surface-2) border border-(--line-strong) p-2.5 text-[11px] text-zinc-300 shadow-xl z-50 animate-fade-in">
                 AI performance analyzer determines the single biggest limiting factor holding back your next calisthenics skill milestone.
               </div>
             )}
@@ -120,9 +120,9 @@ export default function CurrentBottleneckCard() {
       </div>
 
       {/* Highlight Box with Amber Accent */}
-      <div className="bg-[#16130d] border border-[#3e2e13] rounded-xl p-4 flex items-center justify-between gap-4 mb-4">
+      <div className="bg-(--accent-soft) border border-(--accent-line) p-4 flex items-center justify-between gap-4 mb-4">
         <div>
-          <h3 className="text-sm font-bold text-amber-400">
+          <h3 className="text-sm font-bold text-(--accent)">
             Planche Endurance
           </h3>
           <p className="text-xs text-zinc-400 mt-0.5">
@@ -147,9 +147,9 @@ export default function CurrentBottleneckCard() {
             </div>
 
             {/* Custom Bar track */}
-            <div className="w-full h-1.5 bg-[#1b1b22] rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-[#1b1b22] overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-700 ease-out ${attr.color}`}
+                className={`h-full transition-all duration-700 ease-out ${attr.color}`}
                 style={{ width: `${attr.value}%` }}
               />
             </div>
@@ -158,12 +158,12 @@ export default function CurrentBottleneckCard() {
       </div>
 
       {/* Bottom Focus Tip Card */}
-      <div className="bg-[#141419] border border-white/5 rounded-xl p-3.5 flex items-start gap-3 mt-auto">
-        <div className="p-1.5 bg-amber-400/10 rounded-lg shrink-0 mt-0.5">
-          <Lightbulb className="w-4 h-4 text-amber-400" />
+      <div className="bg-(--surface-2) border border-(--line) p-3.5 flex items-start gap-3 mt-auto">
+        <div className="p-1.5 bg-(--accent-soft) shrink-0 mt-0.5">
+          <Lightbulb className="w-4 h-4 text-(--accent)" />
         </div>
         <div className="text-xs">
-          <p className="font-bold text-amber-400">Focus this week</p>
+          <p className="font-bold text-(--accent)">Focus this week</p>
           <p className="text-zinc-400 mt-0.5 leading-relaxed">
             Improve hold endurance with higher volume isometric work.
           </p>

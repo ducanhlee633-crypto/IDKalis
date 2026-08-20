@@ -172,12 +172,12 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         <div className="flex items-center gap-3">
           <button
             onClick={onCancel}
-            className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition"
+            className="p-1.5 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <span className="text-[10px] font-bold text-cyan-400 tracking-wider uppercase">
+            <span className="text-[10px] font-bold text-(--accent) tracking-[0.18em] uppercase">
               CREATE ROUTINE
             </span>
             <input
@@ -190,16 +190,16 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[#1a1a22] border border-cyan-400/30 text-cyan-400 text-xs font-mono font-semibold">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 bg-(--surface-2) border border-(--accent-line) text-(--accent) text-xs font-display font-semibold tnum">
             <span>{exercises.length} EX</span>
-            <span className="text-zinc-600">|</span>
+            <span className="text-(--faint)">|</span>
             <span>{totalSets} SETS</span>
           </div>
 
           <button
             onClick={handleSave}
             disabled={!canSave}
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold px-4 py-2 transition"
+            className="flex items-center gap-2 btn-accent text-xs px-4 py-2"
           >
             <Save className="w-3.5 h-3.5" />
             <span>Save Routine</span>
@@ -208,9 +208,9 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
       </div>
 
       {/* Routine Meta */}
-      <div className="bg-[#121215] border border-[#222228] p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="bg-(--surface) border border-(--line) p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+          <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
             Category
           </label>
           <div className="flex flex-wrap gap-1.5">
@@ -220,7 +220,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                 onClick={() => setCategory(cat)}
                 className={`px-2.5 py-1 text-[10px] font-semibold border transition ${
                   category === cat
-                    ? "bg-cyan-400/15 border-cyan-400/40 text-cyan-400"
+                    ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
                     : "bg-[#0d0d10] border-white/10 text-zinc-400 hover:text-zinc-200"
                 }`}
               >
@@ -231,7 +231,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         </div>
 
         <div>
-          <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+          <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
             Level
           </label>
           <div className="flex flex-wrap gap-1.5">
@@ -241,7 +241,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                 onClick={() => setLevel(lvl)}
                 className={`px-2.5 py-1 text-[10px] font-semibold border transition ${
                   level === lvl
-                    ? "bg-cyan-400/15 border-cyan-400/40 text-cyan-400"
+                    ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
                     : "bg-[#0d0d10] border-white/10 text-zinc-400 hover:text-zinc-200"
                 }`}
               >
@@ -252,22 +252,22 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         </div>
 
         <div>
-          <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+          <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
             Est. Duration
           </label>
           <input
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
             placeholder="e.g. 45 min"
-            className="w-full bg-[#0d0d10] border border-white/10 px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-cyan-400/40 transition"
+            className="w-full bg-(--surface-3) border border-(--line-strong) px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-(--faint) focus:border-(--accent-line) transition"
           />
         </div>
       </div>
 
       {/* Routine Note */}
-      <div className="bg-[#121215] border border-[#222228] p-4">
+      <div className="bg-(--surface) border border-(--line) p-4">
         <div className="flex items-center gap-1.5 mb-2">
-          <StickyNote className="w-3.5 h-3.5 text-amber-400" />
+          <StickyNote className="w-3.5 h-3.5 text-(--faint)" />
           <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
             Routine Note
           </label>
@@ -277,21 +277,21 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
           onChange={(e) => setNote(e.target.value)}
           rows={2}
           placeholder="Notes about this routine (goals, progression strategy, equipment needed...)"
-          className="w-full bg-[#0d0d10] border border-white/10 px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-cyan-400/40 transition resize-none"
+          className="w-full bg-(--surface-3) border border-(--line-strong) px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-(--faint) focus:border-(--accent-line) transition resize-none"
         />
       </div>
 
       {/* Exercise List */}
       <div className="space-y-4">
         {exercises.length === 0 && (
-          <div className="bg-[#121215] border border-dashed border-[#2a2a32] p-10 text-center">
-            <p className="text-sm text-zinc-400 mb-1">No exercises yet.</p>
-            <p className="text-xs text-zinc-600 mb-5">
+          <div className="bg-(--surface) border border-dashed border-(--line-strong) p-10 text-center">
+            <p className="text-sm text-(--muted) mb-1">No exercises yet.</p>
+            <p className="text-xs text-(--faint) mb-5">
               Add exercises from the library to build your routine.
             </p>
             <button
               onClick={() => setPickerOpen(true)}
-              className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-5 py-2.5 transition active:scale-[0.98]"
+              className="inline-flex items-center gap-2 btn-accent text-xs px-5 py-2.5 active:scale-[0.98]"
             >
               <Plus className="w-4 h-4" />
               <span>Add Exercise</span>
@@ -302,17 +302,17 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         {exercises.map((ex, idx) => {
           const fieldKey = fieldKeyFor(ex.inputType);
           return (
-            <div key={ex.id} className="bg-[#121215] border border-[#222228] p-5">
+            <div key={ex.id} className="bg-(--surface) border border-(--line) p-5">
               {/* Exercise Header */}
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div className="flex items-start gap-3 flex-1">
-                  <div className="w-8 h-8 bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400 text-sm font-bold shrink-0">
+                  <div className="w-8 h-8 bg-(--accent-soft) border border-(--accent-line) flex items-center justify-center text-(--accent) font-display text-sm font-bold shrink-0">
                     {idx + 1}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-bold text-zinc-100">{ex.name}</h3>
-                      <span className="px-1.5 py-0.5 bg-[#1c1c24] border border-white/5 text-zinc-500 text-[9px] font-medium uppercase">
+                      <span className="px-1.5 py-0.5 bg-(--surface-3) border border-(--line) text-(--faint) text-[9px] font-medium uppercase">
                         {inputTypeLabel[ex.inputType]}
                       </span>
                     </div>
@@ -320,7 +320,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                       value={ex.target}
                       onChange={(e) => updateExercise(ex.id, "target", e.target.value)}
                       placeholder={`Target (e.g. ${defaultTargetFor(ex)})`}
-                      className="mt-1 w-full sm:w-56 bg-[#0d0d10] border border-white/[0.08] px-2.5 py-1.5 text-[11px] text-zinc-300 outline-none placeholder:text-zinc-600 focus:border-cyan-400/40 transition"
+                      className="mt-1 w-full sm:w-56 bg-(--surface-3) border border-(--line-strong) px-2.5 py-1.5 text-[11px] text-zinc-300 outline-none placeholder:text-(--faint) focus:border-(--accent-line) transition"
                     />
                   </div>
                 </div>
@@ -328,20 +328,20 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                   <button
                     onClick={() => moveExercise(ex.id, -1)}
                     disabled={idx === 0}
-                    className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-1.5 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ChevronUp className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => moveExercise(ex.id, 1)}
                     disabled={idx === exercises.length - 1}
-                    className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-1.5 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ChevronDown className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => removeExercise(ex.id)}
-                    className="p-1.5 text-red-400/70 hover:text-red-400 hover:bg-red-400/10 transition"
+                    className="p-1.5 text-(--faint) hover:text-(--accent) hover:bg-(--accent-soft) transition"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -370,21 +370,21 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                     value={set[fieldKey] || ""}
                     onChange={(e) => updateSet(ex.id, setIdx, fieldKey, e.target.value)}
                     placeholder="-"
-                    className="bg-[#0d0d10] border border-white/[0.08] text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-cyan-400/40 transition placeholder:text-zinc-600"
+                    className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
                   />
                   <input
                     type="text"
                     value={set.reps || ""}
                     onChange={(e) => updateSet(ex.id, setIdx, "reps", e.target.value)}
                     placeholder="-"
-                    className="bg-[#0d0d10] border border-white/[0.08] text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-cyan-400/40 transition placeholder:text-zinc-600"
+                    className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
                   />
                   <input
                     type="text"
                     value={set.rpe || ""}
                     onChange={(e) => updateSet(ex.id, setIdx, "rpe", e.target.value)}
                     placeholder="-"
-                    className="bg-[#0d0d10] border border-white/[0.08] text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-cyan-400/40 transition placeholder:text-zinc-600"
+                    className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
                   />
                   <button
                     onClick={() => removeSet(ex.id, setIdx)}
@@ -400,7 +400,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
               <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
                 <button
                   onClick={() => addSet(ex.id)}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 border border-dashed border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 text-[11px] transition shrink-0"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 border border-dashed border-(--line-strong) text-(--faint) hover:text-zinc-300 hover:border-(--line-strong) text-[11px] transition shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Set</span>
@@ -411,7 +411,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                     value={ex.note}
                     onChange={(e) => updateExercise(ex.id, "note", e.target.value)}
                     placeholder="Note for this exercise (form cues, tempo, alternative...)"
-                    className="w-full bg-[#0d0d10] border border-white/[0.08] px-3 py-2 text-[11px] text-zinc-300 outline-none placeholder:text-zinc-600 focus:border-cyan-400/40 transition"
+                    className="w-full bg-(--surface-3) border border-(--line-strong) px-3 py-2 text-[11px] text-zinc-300 outline-none placeholder:text-(--faint) focus:border-(--accent-line) transition"
                   />
                 </div>
               </div>
@@ -423,7 +423,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         {exercises.length > 0 && (
           <button
             onClick={() => setPickerOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-3.5 border border-dashed border-[#2a2a32] text-zinc-500 hover:text-cyan-400 hover:border-cyan-400/40 text-xs font-semibold transition"
+            className="w-full flex items-center justify-center gap-2 py-3.5 border border-dashed border-(--line-strong) text-zinc-500 hover:text-(--accent) hover:border-(--accent-line) text-xs font-semibold transition"
           >
             <Plus className="w-4 h-4" />
             <span>Add Exercise</span>
@@ -432,7 +432,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
       </div>
 
       {/* Footer Actions */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-white/[0.04]">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-(--line)">
         <button
           onClick={onCancel}
           className="text-xs text-zinc-500 hover:text-zinc-300 transition"
@@ -442,7 +442,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         <button
           onClick={handleSave}
           disabled={!canSave}
-          className="flex items-center gap-2.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-8 py-3 transition shadow-lg shadow-blue-500/20"
+          className="flex items-center gap-2.5 btn-accent text-sm font-semibold px-8 py-3"
         >
           <Save className="w-4.5 h-4.5" />
           <span>Save Routine</span>
@@ -452,19 +452,19 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
       {/* Exercise Picker Modal */}
       {pickerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-[#121215] border border-[#26262e] w-full max-w-lg square-frame max-h-[85vh] flex flex-col">
+          <div className="bg-(--surface) border border-(--line-strong) w-full max-w-lg square-frame max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between p-5 pb-3">
               <h2 className="text-base font-bold text-zinc-100">Add Exercise</h2>
               <button
                 onClick={() => setPickerOpen(false)}
-                className="text-zinc-500 hover:text-zinc-300 p-1 hover:bg-white/5 transition"
+                className="text-(--faint) hover:text-zinc-300 p-1 hover:bg-white/5 transition"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="px-5 pb-3 space-y-3">
-              <div className="flex items-center gap-2 bg-[#0d0d10] border border-white/10 px-3 py-2">
+              <div className="flex items-center gap-2 bg-(--surface-3) border border-(--line-strong) px-3 py-2">
                 <Search className="w-4 h-4 text-zinc-500" />
                 <input
                   value={search}
@@ -480,7 +480,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                     onClick={() => setFilter(cat)}
                     className={`px-2.5 py-1 text-[10px] font-medium transition shrink-0 ${
                       filter === cat
-                        ? "bg-cyan-400/15 border border-cyan-400/30 text-cyan-400"
+                        ? "bg-(--accent-soft) border border-(--accent-line) text-(--accent)"
                         : "bg-[#0d0d10] border border-white/5 text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
@@ -505,14 +505,14 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                       disabled={added}
                       className={`w-full flex items-center gap-3 p-3 border text-left transition ${
                         added
-                          ? "border-cyan-400/30 bg-cyan-400/5 opacity-60"
-                          : "border-white/5 bg-[#0d0d10] hover:border-zinc-600"
+                          ? "border-(--accent-line) bg-(--accent-soft) opacity-60"
+                          : "border-(--line) bg-(--surface-3) hover:border-(--line-strong)"
                       }`}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-bold text-zinc-100">{ex.name}</h3>
-                          <span className="text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 border border-white/5 bg-[#1c1c24] text-zinc-500">
+                          <span className="text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 border border-(--line) bg-(--surface-3) text-(--faint)">
                             {ex.movementType}
                           </span>
                         </div>
@@ -521,7 +521,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                         </p>
                       </div>
                       {added ? (
-                        <span className="flex items-center gap-1 text-cyan-400 text-[10px] font-semibold shrink-0">
+                        <span className="flex items-center gap-1 text-(--accent) text-[10px] font-semibold shrink-0">
                           <Check className="w-3.5 h-3.5" />
                           Added
                         </span>

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { CALISTHENICS_SKILLS, RECENT_WORKOUTS } from "@/data/mockCalisthenicsData";
 import { WORKOUT_PROGRAMS_DETAIL } from "@/data/mockCalisthenicsData";
-import { Plus, Flame, Clock, Zap, Target, Search, Filter, Play, StickyNote } from "lucide-react";
+import { Plus, Clock, Zap, Play, StickyNote } from "lucide-react";
 import ActiveWorkoutPage from "@/components/workout/ActiveWorkoutPage";
 import CreateRoutinePage from "@/components/workout/CreateRoutinePage";
 
@@ -58,7 +58,6 @@ export default function WorkoutsPage() {
   const filteredPrograms =
     filter === "ALL" ? routines : routines.filter((p) => p.category === filter);
 
-  // Handle starting a workout
   const handleStartWorkout = (programId) => {
     const programDetail = WORKOUT_PROGRAMS_DETAIL[programId];
     const customRoutine = routines.find((r) => r.id === programId);
@@ -69,18 +68,15 @@ export default function WorkoutsPage() {
     }
   };
 
-  // Handle finishing/discarding a workout
   const handleFinishWorkout = () => {
     setActiveWorkout(null);
   };
 
-  // Handle saving a new custom routine
   const handleSaveRoutine = (routine) => {
     setRoutines((prev) => [routine, ...prev]);
     setCreatingRoutine(false);
   };
 
-  // If creating a routine, show the CreateRoutinePage
   if (creatingRoutine) {
     return (
       <CreateRoutinePage
@@ -90,7 +86,6 @@ export default function WorkoutsPage() {
     );
   }
 
-  // If an active workout is running, show the ActiveWorkoutPage
   if (activeWorkout) {
     return (
       <ActiveWorkoutPage
@@ -105,15 +100,15 @@ export default function WorkoutsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">Workouts & Routines</h1>
-          <p className="text-xs text-zinc-400 mt-1">
+          <h1 className="font-display text-2xl font-semibold text-zinc-50 tracking-tight">Workouts & Routines</h1>
+          <p className="text-xs text-(--muted) mt-1">
             Calisthenics programs, isometric progressions, and strength routines.
           </p>
         </div>
 
         <button
           onClick={() => setCreatingRoutine(true)}
-          className="flex items-center gap-2 bg-blue-500 text-white text-xs font-semibold px-4 py-2 transition"
+          className="flex items-center gap-2 btn-accent text-xs px-4 py-2 active:scale-[0.98]"
         >
           <Plus className="w-4 h-4" />
           <span>Create Routine</span>
@@ -126,10 +121,10 @@ export default function WorkoutsPage() {
           <button
             key={cat}
             onClick={() => setFilter(cat)}
-            className={`px-3.5 py-1.5 text-xs font-medium transition ${
+            className={`px-3.5 py-1.5 text-xs font-medium border-l-2 transition ${
               filter === cat
-                ? "bg-cyan-400/15 border border-cyan-400/30 text-cyan-400 shadow-[0_0_8px_rgba(0,229,255,0.2)]"
-                : "bg-[#141418] border border-white/5 text-zinc-400 hover:text-zinc-200"
+                ? "border-(--accent) bg-(--accent-soft) text-(--accent)"
+                : "border-transparent bg-(--surface) border-(--line) text-(--muted) hover:text-zinc-200"
             }`}
           >
             {cat}
@@ -142,47 +137,47 @@ export default function WorkoutsPage() {
         {filteredPrograms.map((prog) => (
           <div
             key={prog.id}
-            className="bg-[#121215] border border-[#222228] p-5 square-frame hover:border-zinc-700 transition"
+            className="bg-(--surface) border border-(--line) p-5 square-frame hover:bg-(--surface-2) transition"
           >
             <div className="flex items-start justify-between mb-3">
               <div>
-                <span className="text-[10px] font-bold text-cyan-400 tracking-wider uppercase">
+                <span className="text-[10px] font-bold text-(--accent) tracking-[0.18em] uppercase">
                   {prog.category}
                 </span>
-                <h3 className="text-base font-bold text-zinc-100 mt-0.5">{prog.name}</h3>
+                <h3 className="font-display text-base font-semibold text-zinc-100 mt-0.5">{prog.name}</h3>
               </div>
-              <span className="px-2 py-0.5 bg-[#1c1c24] border border-white/5 text-zinc-400 text-[10px] font-medium">
+              <span className="px-2 py-0.5 bg-(--surface-3) border border-(--line) text-(--muted) text-[10px] font-medium">
                 {prog.level}
               </span>
             </div>
 
             {/* Exercise List */}
-            <div className="space-y-1.5 my-3 bg-[#0d0d10] p-3 border border-white/5">
+            <div className="space-y-1.5 my-3 bg-(--surface-3) p-3 border border-(--line)">
               {prog.exercises.map((ex, idx) => (
                 <div key={idx} className="flex items-center gap-2 text-xs text-zinc-300">
-                  <span className="w-1.5 h-1.5 bg-cyan-400" />
+                  <span className="w-1.5 h-1.5 bg-(--accent)" />
                   <span>{ex}</span>
                 </div>
               ))}
             </div>
 
             {/* Program Details */}
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-3 border-t border-white/[0.04] text-xs text-zinc-400">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-3 border-t border-(--line) text-xs text-(--muted)">
               <div className="flex items-center gap-4 flex-wrap">
                 <span className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                  <Clock className="w-3.5 h-3.5 text-(--faint)" />
                   {prog.duration}
                 </span>
-                <span className="flex items-center gap-1.5 text-amber-400">
-                  <Zap className="w-3.5 h-3.5" />
+                <span className="flex items-center gap-1.5 text-(--muted)">
+                  <Zap className="w-3.5 h-3.5 text-(--accent)" />
                   {prog.intensity ?? `${prog.exercises.length} exercises`}
                 </span>
               </div>
             </div>
 
             {prog.note && (
-              <div className="mt-3 flex items-start gap-2 bg-[#0d0d10] border border-white/5 p-2.5 text-[11px] text-zinc-500">
-                <StickyNote className="w-3.5 h-3.5 text-amber-400/70 mt-0.5 shrink-0" />
+              <div className="mt-3 flex items-start gap-2 bg-(--surface-3) border border-(--line) p-2.5 text-[11px] text-(--faint)">
+                <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 <span>{prog.note}</span>
               </div>
             )}
@@ -190,7 +185,7 @@ export default function WorkoutsPage() {
             {/* Start Button */}
             <button
               onClick={() => handleStartWorkout(prog.id)}
-              className="mt-4 w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-4 py-2.5 transition active:scale-[0.98]"
+              className="mt-4 w-full flex items-center justify-center gap-2 btn-accent text-xs px-4 py-2.5 active:scale-[0.98]"
             >
               <Play className="w-4 h-4" />
               <span>Start {prog.name}</span>
