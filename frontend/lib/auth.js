@@ -1,5 +1,31 @@
-export const API_BASE =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) || "http://localhost:8000";
+function resolveApiBase() {
+  // Allow runtime override via localStorage for debugging (không cần rebuild)
+  // Dùng: localStorage.setItem('idk_api_override','https://your-backend.onrender.com')
+  // Xóa: localStorage.removeItem('idk_api_override')
+  if (typeof window !== "undefined") {
+    try {
+      const ov = window.localStorage.getItem("idk_api_override");
+      if (ov && ov.trim()) return ov.trim().replace(/\/$/, "");
+    } catch {}
+  }
+  return (
+    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) ||
+    "http://localhost:8000"
+  ).replace(/\/$/, "");
+}
+
+export const API_BASE = resolveApiBase();
+
+// Helper để UI có thể lấy API_BASE động (sau khi đổi localStorage)
+export function getApiBase() {
+  return resolveApiBase();
+}
+
+// Debug: log API base (giúp kiểm tra local đang gọi backend nào)
+if (typeof window !== "undefined") {
+  // eslint-disable-next-line no-console
+  console.log("[IDK] API_BASE =", API_BASE, " (override:", typeof window !== "undefined" ? window.localStorage.getItem("idk_api_override") : "n/a", ")");
+}
 
 const TOKEN_KEY = "idk_access_token";
 const USER_KEY = "idk_user";
@@ -29,6 +55,20 @@ export function clearSession() {
   window.localStorage.removeItem(USER_KEY);
 }
 
+async function safeFetch(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (err) {
+    const msg = err?.message || String(err);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.toLowerCase().includes("cors")) {
+      throw new Error(
+        `Không kết nối được backend (${url}). Kiểm tra backend đang chạy ở ${API_BASE} và CORS đã cấu hình. Chi tiết: ${msg}`
+      );
+    }
+    throw err;
+  }
+}
+
 async function parseError(res) {
   try {
     const data = await res.json();
@@ -40,7 +80,7 @@ async function parseError(res) {
 
 // POST /token — login with email or username (OAuth2 form data)
 export async function apiLogin(identifier, password) {
-  const res = await fetch(`${API_BASE}/token`, {
+  const res = await safeFetch(`${API_BASE}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ username: identifier, password }),
@@ -51,7 +91,7 @@ export async function apiLogin(identifier, password) {
 
 // POST /register — create account (returns user, no token until email verified)
 export async function apiRegister({ username, email, password }) {
-  const res = await fetch(`${API_BASE}/register`, {
+  const res = await safeFetch(`${API_BASE}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, email, password }),
@@ -62,7 +102,7 @@ export async function apiRegister({ username, email, password }) {
 
 // GET /me — validate stored token and fetch fresh user profile
 export async function apiGetMe(token) {
-  const res = await fetch(`${API_BASE}/me`, {
+  const res = await safeFetch(`${API_BASE}/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(await parseError(res));

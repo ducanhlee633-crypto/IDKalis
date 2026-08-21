@@ -4,9 +4,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { MUSCLE_GROUPS } from "@/data/mockCalisthenicsData";
 import { Plus, X, Search, Library, Save, Check, ChevronDown } from "lucide-react";
-
-const API_BASE =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) || "http://localhost:8000";
+import { API_BASE } from "@/lib/auth";
 
 export default function ExerciseLibraryPage() {
   const [filter, setFilter] = useState("ALL");

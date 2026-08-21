@@ -9,6 +9,20 @@ async function parseError(res) {
   }
 }
 
+async function safeFetch(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (err) {
+    const msg = err?.message || String(err);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.toLowerCase().includes("cors")) {
+      throw new Error(
+        `Không kết nối được backend (${url}). Kiểm tra backend đang chạy ở ${API_BASE} và CORS đã cấu hình. Chi tiết: ${msg}`
+      );
+    }
+    throw err;
+  }
+}
+
 // GET /api/exercises — public, no auth needed
 // params: { movementType?: string, search?: string }
 export async function apiListExercises({ movementType, search } = {}) {
@@ -19,19 +33,19 @@ export async function apiListExercises({ movementType, search } = {}) {
   if (search) {
     url.searchParams.set("search", search);
   }
-  const res = await fetch(url.toString());
+  const res = await safeFetch(url.toString());
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }
 
 export async function apiGetExercise(id) {
-  const res = await fetch(`${API_BASE}/api/exercises/${id}`);
+  const res = await safeFetch(`${API_BASE}/api/exercises/${id}`);
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }
 
 export async function apiCreateExercise(payload) {
-  const res = await fetch(`${API_BASE}/api/exercises`, {
+  const res = await safeFetch(`${API_BASE}/api/exercises`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
