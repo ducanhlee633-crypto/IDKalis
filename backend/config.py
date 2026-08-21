@@ -14,5 +14,10 @@ class Settings(BaseSettings):
     # Dùng để xác minh access_token do Supabase Auth cấp — không phải secret tự sinh.
     supabase_jwt_secret: str = ""
 
+    # CORS: comma-separated list of allowed frontend origins.
+    # Ví dụ: "http://localhost:3000,https://your-app.vercel.app"
+    # Nếu để trống, fallback về localhost cho dev.
+    cors_origins: str = ""
+
 
 settings = Settings()

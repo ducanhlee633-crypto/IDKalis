@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { MUSCLE_GROUPS } from "@/data/mockCalisthenicsData";
 import { Plus, X, Search, Library, Save, Check, ChevronDown } from "lucide-react";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) || "http://localhost:8000";
 
 export default function ExerciseLibraryPage() {
   const [filter, setFilter] = useState("ALL");
