@@ -8,17 +8,12 @@ import {
   Dumbbell,
   TrendingUp,
   Target,
-  Moon,
-  Heart,
-  Crown,
   Settings,
   HelpCircle,
   ChevronsUpDown,
   PanelLeftClose,
   PanelLeftOpen,
-  Sparkles,
   Library,
-  Menu,
   X,
   LogOut,
   LogIn,
@@ -37,8 +32,6 @@ const overviewLinks = [
 
 const trackingLinks = [
   { name: "Goals", href: "/goals", icon: Target },
-  { name: "Sleep", href: "/sleep", icon: Moon },
-  { name: "Heart Rate", href: "/heart-rate", icon: Heart },
 ];
 
 function NavSection({ label, links, isActive, onNavigate }) {
@@ -79,7 +72,7 @@ function NavSection({ label, links, isActive, onNavigate }) {
   );
 }
 
-function SidebarContent({ isActive, onUpgradeOpen, onCloseClick, onNavigate, closeButton = false, user, onLogout }) {
+function SidebarContent({ isActive, onCloseClick, onNavigate, closeButton = false, user, onLogout }) {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const initials = (user?.username || USER_PROFILE.name)
     .split(/[\s_]+/)
@@ -152,32 +145,15 @@ function SidebarContent({ isActive, onUpgradeOpen, onCloseClick, onNavigate, clo
         />
       </div>
 
-      {/* Bottom Section: Pro Banner + Settings + Profile */}
+      {/* Bottom Section: Settings + Profile */}
       <div className="space-y-4 pt-4">
-        {/* Unlock Pro Banner */}
-        <div className="relative bg-(--surface) border border-(--line) p-4 square-frame">
-          <div className="w-7 h-7 bg-(--surface-2) border border-(--line) flex items-center justify-center mb-2.5">
-            <Crown className="w-4 h-4 text-(--muted)" />
-          </div>
-          <h4 className="text-xs font-semibold text-zinc-100 mb-1">Unlock your best you</h4>
-          <p className="text-[11px] text-(--muted) leading-relaxed mb-3">
-            Upgrade to premium for personalized calisthenics skills, advanced analytics & more.
-          </p>
-          <button
-            onClick={onUpgradeOpen}
-            className="w-full btn-white text-xs py-2 px-3 active:scale-95"
-          >
-            Upgrade now
-          </button>
-        </div>
-
         {/* Secondary Links: Settings & Help Center */}
         <div className="space-y-0.5">
-          <button className="w-full flex items-center gap-3 px-3 py-1.5 text-xs text-(--muted) hover:text-zinc-200 hover:bg-white/[0.03] transition">
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-xs text-(--muted) hover:text-zinc-200 hover:bg-white/[0.03] transition">
             <Settings className="w-4 h-4 text-(--faint)" />
             <span>Settings</span>
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-1.5 text-xs text-(--muted) hover:text-zinc-200 hover:bg-white/[0.03] transition">
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-xs text-(--muted) hover:text-zinc-200 hover:bg-white/[0.03] transition">
             <HelpCircle className="w-4 h-4 text-(--faint)" />
             <span>Help center</span>
           </button>
@@ -239,9 +215,7 @@ function SidebarContent({ isActive, onUpgradeOpen, onCloseClick, onNavigate, clo
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   if (pathname === "/login") return null;
 
@@ -250,50 +224,13 @@ export default function Sidebar() {
     return pathname.startsWith(href);
   };
 
-  const closeMobile = () => setIsMobileOpen(false);
-
   const handleLogout = () => {
     logout();
-    closeMobile();
   };
 
   return (
     <>
-      {/* Mobile Hamburger Button */}
-      <button
-        onClick={() => setIsMobileOpen(true)}
-        className="fixed top-4 left-4 z-30 lg:hidden flex items-center justify-center w-9 h-9 bg-(--surface-3)/90 backdrop-blur border border-(--line) text-zinc-300 hover:text-white hover:border-(--line-strong) transition"
-        aria-label="Open navigation menu"
-      >
-        <Menu className="w-5 h-5" />
-      </button>
-
-      {/* Mobile Backdrop */}
-      {isMobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden animate-fade-in"
-          onClick={closeMobile}
-        />
-      )}
-
-      {/* Mobile Drawer */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-(--surface-3) border-r border-(--line) flex flex-col justify-between overflow-y-auto select-none shrink-0 transition-transform duration-300 lg:hidden ${
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <SidebarContent
-          isActive={isActive}
-          onUpgradeOpen={() => setIsUpgradeModalOpen(true)}
-          onCloseClick={closeMobile}
-          onNavigate={closeMobile}
-          closeButton
-          user={user}
-          onLogout={handleLogout}
-        />
-      </aside>
-
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - hidden on mobile, replaced by BottomNav */}
       <aside
         className={`hidden lg:flex ${
           isCollapsed
@@ -304,7 +241,6 @@ export default function Sidebar() {
         {!isCollapsed && (
           <SidebarContent
             isActive={isActive}
-            onUpgradeOpen={() => setIsUpgradeModalOpen(true)}
             onCloseClick={() => setIsCollapsed(true)}
             user={user}
             onLogout={handleLogout}
@@ -315,7 +251,7 @@ export default function Sidebar() {
       {isCollapsed && (
         <button
           onClick={() => setIsCollapsed(false)}
-          className="hidden lg:flex fixed top-4 left-4 z-50 items-center justify-center text-zinc-500 hover:text-zinc-300 p-1.5 hover:bg-white/5 transition"
+          className="hidden lg:flex fixed top-4 left-4 z-50 items-center justify-center text-zinc-500 hover:text-zinc-300 p-1.5 hover:bg-white/5 transition min-w-[44px] min-h-[44px]"
           title="Expand sidebar"
         >
           <PanelLeftOpen className="w-4 h-4" />

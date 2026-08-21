@@ -1,11 +1,58 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { RECENT_WORKOUTS } from "@/data/mockCalisthenicsData";
 import { ChevronRight } from "lucide-react";
+import { getStoredSession } from "@/lib/auth";
+import { apiListWorkouts } from "@/lib/workouts";
+
+function formatWorkoutDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function inferIconType(name) {
+  const n = (name || "").toLowerCase();
+  if (n.includes("push") || n.includes("chest") || n.includes("tricep") || n.includes("planche") || n.includes("dip")) return "bench";
+  if (n.includes("pull") || n.includes("back") || n.includes("bicep") || n.includes("lever") || n.includes("muscle")) return "pull";
+  if (n.includes("leg") || n.includes("squat") || n.includes("pistol") || n.includes("nordic")) return "squat";
+  return "fullbody";
+}
 
 export default function RecentWorkouts() {
+  const [workouts, setWorkouts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
+
+  const fetchWorkouts = useCallback(async () => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const session = getStoredSession();
+      const token = session?.token;
+      if (!token) {
+        setWorkouts([]);
+        setFetchError("Bạn cần đăng nhập để xem workouts.");
+        return;
+      }
+      const data = await apiListWorkouts(token);
+      const list = Array.isArray(data) ? data : [];
+      // API đã order session_number desc, lấy 4 gần nhất
+      setWorkouts(list.slice(0, 4));
+    } catch (err) {
+      setFetchError(err?.message || "Không tải được workouts.");
+      setWorkouts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchWorkouts();
+  }, [fetchWorkouts]);
+
   const renderWorkoutGraphic = (iconType) => {
     return (
       <div className="w-11 h-11 bg-(--surface-3) border border-(--line) flex items-center justify-center relative overflow-hidden group-hover:border-(--accent-line) transition">
@@ -68,28 +115,61 @@ export default function RecentWorkouts() {
 
       {/* Workout Items List */}
       <div className="space-y-2.5">
-        {RECENT_WORKOUTS.map((workout) => (
-          <div
-            key={workout.id}
-            className="group flex items-center justify-between p-2 hover:bg-white/[0.03] border border-transparent hover:border-(--line) transition-all cursor-pointer"
-          >
-            <div className="flex items-center gap-3.5">
-              {renderWorkoutGraphic(workout.iconType)}
-              <div>
-                <h4 className="text-xs font-semibold text-zinc-200 group-hover:text-zinc-50 transition">
-                  {workout.title}
-                </h4>
-                <div className="flex items-center gap-2 text-[11px] text-(--faint) mt-0.5">
-                  <span>{workout.date}</span>
-                  <span>•</span>
-                  <span>{workout.duration}</span>
+        {loading && <div className="text-[11px] text-(--muted) py-6 text-center">Đang tải workouts...</div>}
+        {!loading && fetchError && (
+          <div className="text-center py-4 space-y-2">
+            <p className="text-[11px] text-amber-400">{fetchError}</p>
+            <button onClick={fetchWorkouts} className="text-[11px] px-3 py-1 border border-(--line) hover:bg-white/5 text-(--muted)">
+              Thử lại
+            </button>
+          </div>
+        )}
+        {!loading && !fetchError && workouts.length === 0 && (
+          <div className="text-center py-6">
+            <p className="text-xs text-(--muted)">Chưa có workout nào.</p>
+            <p className="text-[11px] text-(--faint) mt-1">Hoàn thành buổi tập đầu tiên để hiển thị ở đây.</p>
+          </div>
+        )}
+        {!loading && !fetchError && workouts.map((w) => {
+          const iconType = inferIconType(w.name);
+          const dateLabel = formatWorkoutDate(w.createdAt ?? w.created_at);
+          const durationLabel = w.durationMinutes ?? w.duration_minutes != null ? `${w.durationMinutes ?? w.duration_minutes} min` : "";
+          const setsLabel = w.completedSets ?? w.completed_sets != null ? `${w.completedSets ?? w.completed_sets} sets` : "";
+          const rpeLabel = w.avgRpe ?? w.avg_rpe != null ? `RPE ${w.avgRpe ?? w.avg_rpe}` : "";
+          const meta = [dateLabel, durationLabel].filter(Boolean).join(" • ");
+          return (
+            <div
+              key={w.id}
+              className="group flex items-center justify-between p-2 hover:bg-white/[0.03] border border-transparent hover:border-(--line) transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                {renderWorkoutGraphic(iconType)}
+                <div>
+                  <h4 className="text-xs font-semibold text-zinc-200 group-hover:text-zinc-50 transition">
+                    {w.name}
+                  </h4>
+                  <div className="flex items-center gap-2 text-[11px] text-(--faint) mt-0.5">
+                    <span>{meta || `#${w.sessionNumber ?? w.session_number}`}</span>
+                    {setsLabel && (
+                      <>
+                        <span>•</span>
+                        <span>{setsLabel}</span>
+                      </>
+                    )}
+                    {rpeLabel && (
+                      <>
+                        <span>•</span>
+                        <span>{rpeLabel}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <ChevronRight className="w-4 h-4 text-(--faint) group-hover:text-(--accent) group-hover:translate-x-0.5 transition" />
-          </div>
-        ))}
+              <ChevronRight className="w-4 h-4 text-(--faint) group-hover:text-(--accent) group-hover:translate-x-0.5 transition" />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -60,7 +60,7 @@ export default function ExerciseBlock({
         </div>
         <button
           onClick={() => onInfoClick(exercise)}
-          className="p-1.5 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition border border-(--line)"
+          className="min-w-[44px] min-h-[44px] p-2 flex items-center justify-center text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition border border-(--line)"
         >
           <Info className="w-4 h-4" />
         </button>
@@ -147,17 +147,17 @@ export default function ExerciseBlock({
                 placeholder="-"
               />
 
-              {/* Done Checkbox */}
+              {/* Done Checkbox - 44px touch target */}
               <div className="flex justify-center">
                 <button
                   onClick={() => onToggleDone(exercise.id, setIdx)}
-                  className={`w-7 h-7 flex items-center justify-center border transition-all ${
+                  className={`w-10 h-10 min-w-[40px] min-h-[40px] sm:w-11 sm:h-11 flex items-center justify-center border transition-all ${
                     isDone
                       ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
                       : "bg-[#0d0d10] border-white/[0.08] text-zinc-600 hover:border-zinc-500"
                   }`}
                 >
-                  <Check className="w-3.5 h-3.5" />
+                  <Check className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -168,7 +168,7 @@ export default function ExerciseBlock({
       {/* Add Set Button */}
       <button
         onClick={() => onAddSet(exercise.id)}
-        className="mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 border border-dashed border-(--line-strong) text-(--faint) hover:text-zinc-300 hover:border-(--line-strong) text-xs transition"
+        className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 min-h-[44px] border border-dashed border-(--line-strong) text-(--faint) hover:text-zinc-300 hover:border-(--line-strong) text-xs transition"
       >
         <Plus className="w-3.5 h-3.5" />
         <span>Add Set</span>
