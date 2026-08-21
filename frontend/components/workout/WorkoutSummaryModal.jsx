@@ -12,6 +12,8 @@ export default function WorkoutSummaryModal({
   timerSeconds,
   exercises,
   sets,
+  isSaving = false,
+  error = null,
 }) {
   if (!isOpen) return null;
 
@@ -81,18 +83,27 @@ export default function WorkoutSummaryModal({
           </div>
         </div>
 
+        {/* Error */}
+        {error && (
+          <div className="mx-4 mb-3 bg-red-500/10 border border-red-500/30 px-3 py-2 text-[11px] text-red-400">
+            {error}
+          </div>
+        )}
+
         {/* Buttons */}
         <div className="p-4 border-t border-white/[0.06] space-y-2">
           <button
             onClick={onSave}
-            className="w-full btn-accent text-xs py-2.5 flex items-center justify-center gap-2"
+            disabled={isSaving}
+            className="w-full btn-accent text-xs py-2.5 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <CheckCircle2 className="w-4 h-4" />
-            Save & Close
+            {isSaving ? "Saving..." : "Save & Close"}
           </button>
           <button
             onClick={onDiscard}
-            className="w-full bg-transparent border border-(--accent-line) text-(--accent) hover:bg-(--accent-soft) text-xs font-semibold py-2.5 transition"
+            disabled={isSaving}
+            className="w-full bg-transparent border border-(--accent-line) text-(--accent) hover:bg-(--accent-soft) text-xs font-semibold py-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Discard Workout
           </button>

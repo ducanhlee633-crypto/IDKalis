@@ -22,6 +22,7 @@ import {
   X,
   LogOut,
   LogIn,
+  History,
 } from "lucide-react";
 import { USER_PROFILE } from "@/data/mockCalisthenicsData";
 import { useAuth } from "@/components/auth/AuthContext";
@@ -29,6 +30,7 @@ import { useAuth } from "@/components/auth/AuthContext";
 const overviewLinks = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Workouts", href: "/workouts", icon: Dumbbell },
+  { name: "History", href: "/history", icon: History },
   { name: "Exercise Library", href: "/exercise-library", icon: Library },
   { name: "Progress", href: "/progress", icon: TrendingUp },
 ];

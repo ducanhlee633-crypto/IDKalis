@@ -71,7 +71,7 @@ export default function MuscleFocusWidget() {
           className="md:col-span-7 flex items-center justify-center border border-(--line) relative overflow-hidden min-h-[290px]"
           style={{
             background:
-              "radial-gradient(120% 90% at 50% 28%, rgba(255,77,77,0.05), transparent 60%), rgba(10,10,13,0.6)",
+              "radial-gradient(130% 90% at 50% 22%, rgba(14,165,255,0.09), transparent 62%), radial-gradient(90% 70% at 50% 95%, rgba(14,165,255,0.04), transparent 60%), rgba(10,10,13,0.6)",
           }}
         >
           <BodyModelViewer
@@ -95,7 +95,7 @@ export default function MuscleFocusWidget() {
                 onClick={() => handleSelectMuscle(item.id)}
                 className={`group cursor-pointer px-2.5 py-1.5 border-l-2 transition-all duration-150 ${
                   isActive
-                    ? "border-(--accent) bg-(--accent-soft)"
+                    ? "border-[#0ea5e9] bg-[rgba(14,165,255,0.08)]"
                     : "border-transparent hover:bg-white/[0.02]"
                 }`}
               >
@@ -104,13 +104,13 @@ export default function MuscleFocusWidget() {
                     <span
                       className={`w-1.5 h-1.5 rounded-full transition-all ${
                         isActive
-                          ? "bg-(--accent) shadow-[0_0_8px_var(--accent)]"
+                          ? "bg-[#0ea5e9] shadow-[0_0_8px_rgba(14,165,255,0.9)]"
                           : "bg-(--faint) group-hover:bg-(--muted)"
                       }`}
                     />
                     <span
                       className={`text-[11px] font-bold tracking-widest transition ${
-                        isActive ? "text-(--accent)" : "text-(--muted) group-hover:text-zinc-200"
+                        isActive ? "text-[#0ea5e9]" : "text-(--muted) group-hover:text-zinc-200"
                       }`}
                     >
                       {item.name}
@@ -118,7 +118,7 @@ export default function MuscleFocusWidget() {
                     <span
                       className={`hidden xl:inline text-[8.5px] uppercase tracking-wider px-1 py-px border transition ${
                         isActive
-                          ? "border-(--accent-line) text-(--accent)/80"
+                          ? "border-[rgba(14,165,255,0.28)] text-[#0ea5e9]/80"
                           : "border-(--line) text-(--faint)"
                       }`}
                     >
@@ -128,7 +128,7 @@ export default function MuscleFocusWidget() {
 
                   <span
                     className={`font-display text-[11px] tnum transition ${
-                      isActive ? "text-(--accent) font-bold" : "text-(--faint) group-hover:text-(--muted)"
+                      isActive ? "text-[#0ea5e9] font-bold" : "text-(--faint) group-hover:text-(--muted)"
                     }`}
                   >
                     {item.percentage}%
@@ -139,7 +139,7 @@ export default function MuscleFocusWidget() {
                 <div className="w-full h-[3px] bg-(--surface-3) mt-1.5">
                   <div
                     className={`h-full transition-all duration-300 ${
-                      isActive ? "bg-(--accent)" : "bg-zinc-700 group-hover:bg-zinc-500"
+                      isActive ? "bg-[#0ea5e9] shadow-[0_0_6px_rgba(14,165,255,0.5)]" : "bg-zinc-700 group-hover:bg-zinc-500"
                     }`}
                     style={{ width: `${item.percentage * 3.5}%` }}
                   />
@@ -167,7 +167,7 @@ export default function MuscleFocusWidget() {
       {/* Footer Summary */}
       <div className="flex items-center justify-between pt-3 mt-3 border-t border-(--line) text-[10px]">
         <span className="uppercase tracking-[0.18em] text-(--faint)">Total focus · 100%</span>
-        <span className="flex items-center gap-1.5 text-(--accent)">
+        <span className="flex items-center gap-1.5 text-[#0ea5e9]">
           <Flame className="w-3 h-3" />
           <span className="uppercase tracking-wider">
             Top: {topMuscle.name} · {topMuscle.percentage}%

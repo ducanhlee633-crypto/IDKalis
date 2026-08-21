@@ -69,3 +69,24 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+# ------------------- Workouts -------------------
+
+# Schema nhận dữ liệu khi lưu buổi tập (POST /api/workouts).
+# Frontend gửi camelCase, DB lưu snake_case. session_number do backend tự sinh.
+class WorkoutCreate(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    name: str = Field(min_length=1, description="Tên buổi tập")
+    completed_sets: int = Field(ge=0, description="Số set hoàn thành (done=true)")
+    avg_rpe: float | None = Field(default=None, ge=0, le=10, description="RPE trung bình trên set hoàn thành")
+    duration_minutes: int = Field(ge=0, description="Thời lượng đã convert từ seconds sang minutes (round)")
+
+
+# Schema trả về cho client sau khi lưu. Kế thừa WorkoutCreate nên cũng xuất camelCase.
+class WorkoutResponse(WorkoutCreate):
+    id: str
+    user_id: str
+    session_number: int
+    created_at: str | None = None

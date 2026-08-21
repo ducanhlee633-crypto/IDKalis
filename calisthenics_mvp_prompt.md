@@ -1,12 +1,12 @@
-# Thêm Authencation (log_in, create_user)
-## tông quan
- - tôi cần bạn thêm cho tôi authencation để làm log in, sign up và authorization
+# Thêm table db cho tạo routine trong pgae workouts
 
-## yêu cầu
-- hãy tạo một bảng để store đăng nhập/ đăng kí đó
-- password phai hash và khi check ngừoi dùng có tồn tại hay không thì phải bỏ uppercase,
-- tạo jwt, hash pass và verfiy pass trong auth.py và dùng pydantic settings để quản lí key api tron env.
+## tổng quan
+- hiên tại app đã có db table cho các workout session nhưng khi tạo routine thì vẫn chưa lưu được. 
 
-- tạo thêm phần endpoint log-in("/token"), và /me (kiểm tra token) trong main để xác minh
+## Yêu cầu
+- tôi muốn bạn tạo cho tôi table tên là routines để lưu routine được tạo
+- table cần có 1. name,  category (push, pull,...), bài tập (nên lưu bàng jsonb), note, time est
 
-- hãy tạo logic backend trước rồi sau đó tôi với bạn sẽ làm frontend đăng nhập sau
+- tạo file routines ở backend để connect với backend rồi liên kết vô main.py để push data cho frontend.
+
+- sau đó nhớ hay xoá mock data đi

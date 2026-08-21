@@ -16,6 +16,8 @@ import WorkoutTimer from "./WorkoutTimer";
 import ExerciseInfoModal from "./ExerciseInfoModal";
 import WorkoutSummaryModal from "./WorkoutSummaryModal";
 import WorkoutCompleteModal from "./WorkoutCompleteModal";
+import { getStoredSession } from "@/lib/auth";
+import { apiCreateWorkout } from "@/lib/workouts";
 
 export default function ActiveWorkoutPage({ program, onFinish }) {
   // Initialize sets state from program exercises
@@ -36,6 +38,8 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
   const [sessionNumber, setSessionNumber] = useState(1);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const moreMenuRef = useRef(null);
 
   // Timer tick
@@ -97,7 +101,7 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
     });
   };
 
-  // Get next mock workout session number (persisted so it increments across sessions)
+  // Get next mock workout session number (fallback khi chưa có backend)
   const getNextSessionNumber = () => {
     if (typeof window === "undefined") return 1;
     const key = "idk_workout_session_count";
@@ -107,11 +111,63 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
     return next;
   };
 
-  // Save session -> show congratulation board
-  const handleSave = () => {
-    setSessionNumber(getNextSessionNumber());
-    setShowSummary(false);
-    setShowComplete(true);
+  // Helper: tính completedSets và avgRpe (chỉ trên set done)
+  const computeWorkoutStats = () => {
+    let completedSets = 0;
+    const rpes = [];
+    Object.values(sets).forEach((exerciseSets) => {
+      exerciseSets.forEach((s) => {
+        if (s.done) {
+          completedSets++;
+          if (s.rpe !== undefined && s.rpe !== null && s.rpe !== "-" && s.rpe !== "") {
+            const v = parseFloat(String(s.rpe).replace(",", "."));
+            if (!Number.isNaN(v) && v >= 0 && v <= 10) rpes.push(v);
+          }
+        }
+      });
+    });
+    const avgRpe = rpes.length ? Math.round((rpes.reduce((a, b) => a + b, 0) / rpes.length) * 10) / 10 : null;
+    const durationMinutes = Math.round(timerSeconds / 60);
+    return { completedSets, avgRpe, durationMinutes };
+  };
+
+  // Save session -> gọi POST /api/workouts rồi show congratulation board
+  const handleSave = async () => {
+    const { completedSets, avgRpe, durationMinutes } = computeWorkoutStats();
+    const session = getStoredSession();
+    const token = session?.token;
+
+    // Bắt buộc login để có FK tới users
+    if (!token) {
+      setSaveError("Bạn cần đăng nhập để lưu buổi tập. Vui lòng đăng nhập lại.");
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const res = await apiCreateWorkout(token, {
+        name: program.name,
+        completedSets,
+        avgRpe,
+        durationMinutes,
+      });
+      // Backend trả về camelCase (sessionNumber) hoặc snake_case (session_number)
+      const serverSession = res.sessionNumber ?? res.session_number ?? getNextSessionNumber();
+      // Vẫn sync localStorage để fallback hiển thị khi offline sau này
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem("idk_workout_session_count", String(serverSession));
+        } catch {}
+      }
+      setSessionNumber(serverSession);
+      setShowSummary(false);
+      setShowComplete(true);
+    } catch (err) {
+      setSaveError(err?.message || "Lưu buổi tập thất bại. Vui lòng thử lại.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Close congratulation board -> back to workouts list
@@ -164,10 +220,11 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
           {/* Save Session */}
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 btn-ghost text-xs font-semibold px-4 py-2"
+            disabled={isSaving}
+            className="flex items-center gap-2 btn-ghost text-xs font-semibold px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>Save Session</span>
+            <span>{isSaving ? "Saving..." : "Save Session"}</span>
           </button>
 
           {/* More Menu */}
@@ -252,13 +309,20 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
       {/* Workout Summary Modal */}
       <WorkoutSummaryModal
         isOpen={showSummary}
-        onClose={() => setShowSummary(false)}
+        onClose={() => {
+          if (!isSaving) {
+            setSaveError(null);
+            setShowSummary(false);
+          }
+        }}
         onSave={handleSave}
         onDiscard={handleDiscard}
         workoutName={program.name}
         timerSeconds={timerSeconds}
         exercises={program.exercises}
         sets={sets}
+        isSaving={isSaving}
+        error={saveError}
       />
 
       {/* Workout Complete (Congratulation) Modal */}

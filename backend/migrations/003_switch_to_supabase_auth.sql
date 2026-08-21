@@ -14,5 +14,21 @@ create table if not exists users (
   created_at timestamptz default now()
 );
 
--- Bật RLS: backend đọc/ghi bằng service_role key (RLS không ảnh hưởng), anon không truy cập được.
+-- Bật RLS
 alter table users enable row level security;
+
+-- Policies cho users table:
+-- 1. Cho phép tất cả user đã authenticate hoặc anon xem profile công khai (username, id, created_at)
+create policy "Allow public read access to user profiles"
+  on users for select
+  using (true);
+
+-- 2. Cho phép user insert profile của chính mình
+create policy "Allow users to insert their own profile"
+  on users for insert
+  with check (auth.uid() = id);
+
+-- 3. Cho phép user update profile của chính mình
+create policy "Allow users to update their own profile"
+  on users for update
+  using (auth.uid() = id);
