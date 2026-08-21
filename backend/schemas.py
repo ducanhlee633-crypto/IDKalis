@@ -166,3 +166,33 @@ class GoalResponse(GoalCreate):
     target: str
     deadline: str
     created_at: str | None = None
+
+
+# ------------------- Training Schedules -------------------
+
+# Schema nhận dữ liệu khi cập nhật 1 ngày trong lịch tập (PUT /api/training-schedule/{day_of_week}).
+# Frontend gửi camelCase (routineId), DB lưu snake_case (routine_id). null = Rest Day.
+class TrainingScheduleUpdate(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    routine_id: str | None = Field(default=None, description="FK routines.id, null = Rest Day")
+
+
+# Dùng cho bulk update (PUT /api/training-schedule) — gửi cả tuần 1 lần
+class TrainingScheduleBulkUpdate(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    schedules: list[dict] = Field(description="Mảng {dayOfWeek: int 0-6, routineId: str|null}")
+
+
+# Schema trả về cho client. routine được enrich từ join routines nếu có.
+class TrainingScheduleResponse(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    id: str
+    user_id: str
+    day_of_week: int = Field(ge=0, le=6, description="0=Mon .. 6=Sun")
+    routine_id: str | None = None
+    routine: dict | None = Field(default=None, description="Enriched routine object nếu routine_id != null")
+    created_at: str | None = None
+    updated_at: str | None = None
