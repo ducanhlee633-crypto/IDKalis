@@ -71,9 +71,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md relative animate-slide-up">
         {/* Brand */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-(--surface-2) border border-(--accent-line) flex items-center justify-center text-zinc-50 font-display font-bold text-xl">
-            I
-          </div>
+          <img
+            src="/logo.png"
+            alt="IDK Logo"
+            className="w-10 h-10 object-cover border border-(--accent-line)"
+          />
           <div>
             <p className="font-display text-xl font-bold text-white tracking-[0.22em] uppercase leading-none">
               IDK

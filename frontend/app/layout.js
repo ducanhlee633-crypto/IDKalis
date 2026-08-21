@@ -20,6 +20,14 @@ const inter = Inter({
 export const metadata = {
   title: "IDK — Calisthenics & Bodyweight Tracker",
   description: "Modern dark-mode Calisthenics & Bodyweight Training Performance Tracker",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport = {

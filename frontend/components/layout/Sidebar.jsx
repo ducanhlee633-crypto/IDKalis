@@ -90,9 +90,11 @@ function SidebarContent({ isActive, onCloseClick, onNavigate, closeButton = fals
         {/* Brand Logo & Close/Collapse */}
         <div className="flex items-center justify-between px-2 pt-1">
           <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 bg-(--surface-2) border border-(--accent-line) flex items-center justify-center text-(--text) font-display font-bold text-lg group-hover:border-(--accent) transition">
-              I
-            </div>
+            <img
+              src="/logo.png"
+              alt="IDK Logo"
+              className="w-8 h-8 object-cover border border-(--accent-line) group-hover:border-(--accent) transition"
+            />
             <div className="flex flex-col">
               <span className="text-base font-display font-bold text-white tracking-[0.22em] uppercase leading-none">
                 IDK
