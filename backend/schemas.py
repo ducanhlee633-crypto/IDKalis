@@ -90,3 +90,79 @@ class WorkoutResponse(WorkoutCreate):
     user_id: str
     session_number: int
     created_at: str | None = None
+
+
+# ------------------- Routines -------------------
+
+# Schema nhận dữ liệu khi tạo routine (POST /api/routines).
+# Frontend gửi camelCase (timeEst), DB lưu snake_case (time_est).
+# exercises là snapshot jsonb: mỗi exercise gồm reps/sets (defaultSets) để giữ đủ thông tin tập.
+class RoutineCreate(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    name: str = Field(min_length=1, description="Tên routine")
+    category: str = Field(description="PUSH/PULL/CORE/LEGS/SKILLS")
+    exercises: list[dict] = Field(default_factory=list, description="Snapshot exercises với reps/sets")
+    note: str = ""
+    time_est: int = Field(ge=0, description="Time estimate minutes (locked number)")
+
+    @field_validator("category")
+    @classmethod
+    def normalize_category(cls, value: str) -> str:
+        v = value.strip().upper()
+        allowed = {"PUSH", "PULL", "CORE", "LEGS", "SKILLS"}
+        if v not in allowed:
+            raise ValueError(f"category must be one of {', '.join(sorted(allowed))}")
+        return v
+
+
+# Schema trả về cho client. Kế thừa RoutineCreate nên cũng xuất camelCase.
+class RoutineResponse(RoutineCreate):
+    id: str
+    user_id: str
+    created_at: str | None = None
+
+
+# ------------------- Goals -------------------
+
+# Schema nhận dữ liệu khi tạo goal (POST /api/goals).
+# Frontend gửi camelCase, DB lưu snake_case. deadline/category/target do backend tự sinh.
+class GoalCreate(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    title: str = Field(min_length=1, description="Tên goal")
+    metric_type: str = Field(description="seconds|weighted|reps")
+    metric_value: float = Field(gt=0, description="Target value")
+    time_amount: int = Field(gt=0, description="Estimated time amount")
+    time_unit: str = Field(description="weeks|months")
+
+    @field_validator("metric_type")
+    @classmethod
+    def normalize_metric_type(cls, value: str) -> str:
+        v = value.strip().lower()
+        allowed = {"seconds", "weighted", "reps"}
+        if v not in allowed:
+            raise ValueError(f"metric_type must be one of {', '.join(sorted(allowed))}")
+        return v
+
+    @field_validator("time_unit")
+    @classmethod
+    def normalize_time_unit(cls, value: str) -> str:
+        v = value.strip().lower()
+        allowed = {"weeks", "months"}
+        if v not in allowed:
+            raise ValueError(f"time_unit must be one of {', '.join(sorted(allowed))}")
+        return v
+
+
+# Schema trả về cho client. Kế thừa GoalCreate nên cũng xuất camelCase.
+class GoalResponse(GoalCreate):
+    id: str
+    user_id: str
+    category: str
+    status: str
+    progress: int
+    current: str
+    target: str
+    deadline: str
+    created_at: str | None = None

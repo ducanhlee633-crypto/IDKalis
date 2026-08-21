@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   ArrowLeft,
   Plus,
@@ -13,24 +13,29 @@ import {
   StickyNote,
   Check,
 } from "lucide-react";
-import { EXERCISE_LIBRARY } from "@/data/mockCalisthenicsData";
+import { apiListExercises } from "@/lib/exercises";
 
 const CATEGORIES = ["PUSH", "PULL", "CORE", "LEGS", "SKILLS"];
-const LEVELS = ["Beginner", "Intermediate", "Advanced"];
+const TIME_EST_OPTIONS = [15, 30, 45, 60, 75, 90, 120];
 
 const inputTypeLabel = {
   time: "Time Hold",
   weight: "Weighted",
   note: "Bodyweight",
+  reps_time: "Reps + Time",
 };
 
-const fieldKeyFor = (inputType) =>
-  inputType === "time" ? "time" : inputType === "weight" ? "weight" : "note";
+const fieldKeyFor = (inputType) => {
+  if (inputType === "time" || inputType === "reps_time") return "time";
+  if (inputType === "weight") return "weight";
+  return "note";
+};
 
 function defaultSetsFor(inputType, count = 3) {
   const sets = [];
   for (let i = 0; i < count; i++) {
     if (inputType === "time") sets.push({ time: "30", reps: "-", rpe: "-" });
+    else if (inputType === "reps_time") sets.push({ time: "30", reps: "10", rpe: "-" });
     else if (inputType === "weight") sets.push({ weight: "", reps: "8", rpe: "-" });
     else sets.push({ note: "BW", reps: "10", rpe: "-" });
   }
@@ -54,14 +59,37 @@ function createExercise(libEx) {
 export default function CreateRoutinePage({ onSave, onCancel }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("PUSH");
-  const [level, setLevel] = useState("Intermediate");
-  const [duration, setDuration] = useState("45 min");
+  const [timeEst, setTimeEst] = useState(45);
   const [note, setNote] = useState("");
   const [exercises, setExercises] = useState([]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
+
+  // Fetch exercise library from Supabase via /api/exercises (thay cho EXERCISE_LIBRARY mock)
+  const [libraryExercises, setLibraryExercises] = useState([]);
+  const [libraryLoading, setLibraryLoading] = useState(true);
+  const [libraryError, setLibraryError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLibraryLoading(true);
+        setLibraryError(null);
+        const data = await apiListExercises();
+        if (!cancelled) setLibraryExercises(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (!cancelled) setLibraryError(err?.message || "Failed to load exercises");
+      } finally {
+        if (!cancelled) setLibraryLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const totalSets = useMemo(
     () => exercises.reduce((sum, ex) => sum + ex.defaultSets.length, 0),
@@ -133,12 +161,11 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
   };
 
   const handleSave = () => {
+    // exercises snapshot gồm reps/sets (defaultSets) để lưu jsonb
     const routine = {
-      id: `prog-custom-${Date.now()}`,
       name: name.trim() || "Untitled Routine",
       category,
-      level,
-      duration,
+      timeEst: Number(timeEst),
       note: note.trim(),
       exercises: exercises.map((ex) => ({
         id: ex.id,
@@ -157,7 +184,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
 
   const canSave = name.trim().length > 0 && exercises.length > 0;
 
-  const filteredLibrary = EXERCISE_LIBRARY.filter((ex) => {
+  const filteredLibrary = libraryExercises.filter((ex) => {
     const matchesFilter = filter === "ALL" || ex.movementType === filter;
     const query = search.trim().toLowerCase();
     const matchesSearch =
@@ -207,8 +234,8 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         </div>
       </div>
 
-      {/* Routine Meta */}
-      <div className="bg-(--surface) border border-(--line) p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Routine Meta — category + locked time_est (int minutes) */}
+      <div className="bg-(--surface) border border-(--line) p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
             Category
@@ -232,35 +259,23 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
 
         <div>
           <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
-            Level
+            Est. Duration (minutes) — locked
           </label>
           <div className="flex flex-wrap gap-1.5">
-            {LEVELS.map((lvl) => (
+            {TIME_EST_OPTIONS.map((t) => (
               <button
-                key={lvl}
-                onClick={() => setLevel(lvl)}
-                className={`px-2.5 py-1 text-[10px] font-semibold border transition ${
-                  level === lvl
+                key={t}
+                onClick={() => setTimeEst(t)}
+                className={`px-3 py-1.5 text-xs font-semibold border transition ${
+                  timeEst === t
                     ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
                     : "bg-[#0d0d10] border-white/10 text-zinc-400 hover:text-zinc-200"
                 }`}
               >
-                {lvl}
+                {t} min
               </button>
             ))}
           </div>
-        </div>
-
-        <div>
-          <label className="block text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em] mb-1.5">
-            Est. Duration
-          </label>
-          <input
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            placeholder="e.g. 45 min"
-            className="w-full bg-(--surface-3) border border-(--line-strong) px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-(--faint) focus:border-(--accent-line) transition"
-          />
         </div>
       </div>
 
@@ -491,7 +506,30 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-2">
-              {filteredLibrary.length === 0 ? (
+              {libraryLoading ? (
+                <p className="text-xs text-zinc-400 text-center py-6">Loading exercises from Supabase...</p>
+              ) : libraryError ? (
+                <div className="text-center py-6 space-y-2">
+                  <p className="text-xs text-red-400">Failed to load exercises: {libraryError}</p>
+                  <button
+                    onClick={async () => {
+                      try {
+                        setLibraryLoading(true);
+                        setLibraryError(null);
+                        const data = await apiListExercises();
+                        setLibraryExercises(Array.isArray(data) ? data : []);
+                      } catch (err) {
+                        setLibraryError(err?.message || "Failed to load exercises");
+                      } finally {
+                        setLibraryLoading(false);
+                      }
+                    }}
+                    className="text-xs btn-ghost px-3 py-1.5"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : filteredLibrary.length === 0 ? (
                 <p className="text-xs text-zinc-500 text-center py-6">
                   No exercises found.
                 </p>
