@@ -16,12 +16,12 @@ export default function ProgressPage() {
       {/* Top Header */}
       <ProgressHeader timeframe={timeframe} setTimeframe={setTimeframe} />
 
-      {/* Top 5 KPI Metrics (Strength, Skill, Volume, Consistency, Recovery) */}
+      {/* KPI Metrics (Volume, Consistency) */}
       <MetricKpiCards />
 
       {/* Middle Row: Performance Trend Chart & Training Consistency Heatmap */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <PerformanceTrendCard />
+        <PerformanceTrendCard timeframe={timeframe} />
         <TrainingConsistencyCard />
       </div>
 

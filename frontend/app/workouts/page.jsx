@@ -2,16 +2,19 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { WORKOUT_PROGRAMS_DETAIL } from "@/data/mockCalisthenicsData";
-import { Plus, Clock, Zap, Play, StickyNote, Trash2 } from "lucide-react";
+import { Plus, Clock, Zap, Play, StickyNote, Trash2, Calendar } from "lucide-react";
 import ActiveWorkoutPage from "@/components/workout/ActiveWorkoutPage";
 import CreateRoutinePage from "@/components/workout/CreateRoutinePage";
+import TrainingScheduleModal from "@/components/workout/TrainingScheduleModal";
 import { getStoredSession } from "@/lib/auth";
 import { apiListRoutines, apiCreateRoutine, apiDeleteRoutine } from "@/lib/routines";
+import { apiListTrainingSchedule, apiUpdateTrainingScheduleDay } from "@/lib/trainingSchedule";
 
 export default function WorkoutsPage() {
   const [filter, setFilter] = useState("ALL");
   const [activeWorkout, setActiveWorkout] = useState(null);
   const [creatingRoutine, setCreatingRoutine] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
 
   const categories = ["ALL", "PUSH", "PULL", "CORE", "LEGS", "SKILLS"];
 
@@ -21,6 +24,66 @@ export default function WorkoutsPage() {
   const [fetchError, setFetchError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+
+  // Training schedule state (7 days, PATCH từng ngày)
+  const [schedules, setSchedules] = useState([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleError, setScheduleError] = useState(null);
+
+  const fetchSchedules = useCallback(async () => {
+    setScheduleLoading(true);
+    setScheduleError(null);
+    try {
+      const session = getStoredSession();
+      const token = session?.token;
+      if (!token) {
+        setSchedules([]);
+        setScheduleError("Bạn cần đăng nhập để xem lịch tập.");
+        return;
+      }
+      const data = await apiListTrainingSchedule(token);
+      setSchedules(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setScheduleError(err?.message || "Không tải được lịch tập.");
+      setSchedules([]);
+    } finally {
+      setScheduleLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch schedules on mount
+    fetchSchedules().catch((e) => {
+      console.error("fetchSchedules unhandled", e);
+      setScheduleError(e?.message || "Không tải được lịch tập.");
+      setScheduleLoading(false);
+    });
+  }, [fetchSchedules]);
+
+  const handleUpdateScheduleDay = useCallback(
+    async (dayOfWeek, routineId) => {
+      const session = getStoredSession();
+      const token = session?.token;
+      if (!token) throw new Error("Bạn cần đăng nhập.");
+      const updated = await apiUpdateTrainingScheduleDay(token, dayOfWeek, routineId);
+      // Cập nhật local schedules: thay entry của dayOfWeek bằng updated
+      setSchedules((prev) => {
+        const next = [...prev];
+        const idx = next.findIndex((s) => (s.dayOfWeek ?? s.day_of_week) === dayOfWeek);
+        if (idx >= 0) next[idx] = updated;
+        else next.push(updated);
+        return next.sort((a, b) => (a.dayOfWeek ?? a.day_of_week) - (b.dayOfWeek ?? b.day_of_week));
+      });
+      return updated;
+    },
+    []
+  );
+
+  // Khi mở modal thì refresh schedules để đồng bộ nếu routines vừa thay đổi
+  const handleOpenSchedule = useCallback(() => {
+    setShowSchedule(true);
+    fetchSchedules();
+  }, [fetchSchedules]);
 
   const fetchRoutines = useCallback(async () => {
     setLoading(true);
@@ -104,6 +167,14 @@ export default function WorkoutsPage() {
       if (!token) throw new Error("Bạn cần đăng nhập.");
       await apiDeleteRoutine(token, routineId);
       setRoutines((prev) => prev.filter((r) => r.id !== routineId));
+      // Đồng bộ schedules: ngày nào đang assign routine này sẽ thành Rest (DB FK SET NULL, nhưng update local ngay)
+      setSchedules((prev) =>
+        prev.map((s) => {
+          const rid = s.routineId ?? s.routine_id;
+          if (rid === routineId) return { ...s, routineId: null, routine_id: null, routine: null };
+          return s;
+        })
+      );
     } catch (err) {
       alert(err?.message || "Xoá routine thất bại.");
     }
@@ -158,13 +229,22 @@ export default function WorkoutsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setCreatingRoutine(true)}
-          className="flex items-center gap-2 btn-accent text-xs px-4 py-2 active:scale-[0.98]"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Routine</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleOpenSchedule}
+            className="flex items-center gap-2 bg-(--surface) border border-(--line) hover:bg-(--surface-2) text-zinc-200 text-xs px-4 py-2 active:scale-[0.98] transition"
+          >
+            <Calendar className="w-4 h-4 text-(--accent)" />
+            <span>Training Schedule</span>
+          </button>
+          <button
+            onClick={() => setCreatingRoutine(true)}
+            className="flex items-center gap-2 btn-accent text-xs px-4 py-2 active:scale-[0.98]"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Routine</span>
+          </button>
+        </div>
       </div>
 
       {/* Category Pills */}
@@ -207,6 +287,40 @@ export default function WorkoutsPage() {
             <Plus className="w-4 h-4" />
             <span>Create Routine</span>
           </button>
+        </div>
+      )}
+
+      {/* Weekly Schedule Preview — compact strip */}
+      {!loading && !scheduleLoading && schedules.length === 7 && (
+        <div className="bg-(--surface) border border-(--line) p-3">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[10px] font-bold tracking-[0.16em] uppercase text-(--accent) flex items-center gap-1.5">
+              <Calendar className="w-3 h-3" /> Weekly Schedule
+            </span>
+            <button onClick={handleOpenSchedule} className="text-[10px] text-(--muted) hover:text-zinc-200 underline">
+              Edit
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-1.5">
+            {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((short, idx) => {
+              const entry = schedules.find((s) => (s.dayOfWeek ?? s.day_of_week) === idx);
+              const rid = entry?.routineId ?? entry?.routine_id ?? null;
+              const routine = entry?.routine ?? (rid ? routines.find((r) => r.id === rid) : null);
+              const isRest = !rid;
+              return (
+                <div
+                  key={short}
+                  className={`text-center p-2 border text-[10px] leading-tight ${isRest ? "bg-(--surface-3) border-(--line) text-(--faint)" : "bg-(--accent-soft) border-(--accent-line) text-zinc-100"}`}
+                  title={routine ? routine.name : "Rest Day"}
+                >
+                  <div className="font-bold tracking-wider">{short}</div>
+                  <div className="truncate mt-1 font-medium max-w-full">
+                    {isRest ? "Rest" : (routine?.name ?? "—")}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -308,6 +422,17 @@ export default function WorkoutsPage() {
           );
         })}
       </div>
+
+      {/* Training Schedule Modal */}
+      <TrainingScheduleModal
+        isOpen={showSchedule}
+        onClose={() => setShowSchedule(false)}
+        routines={routines}
+        schedules={schedules}
+        onUpdateDay={handleUpdateScheduleDay}
+        loading={scheduleLoading}
+        error={scheduleError}
+      />
     </div>
   );
 }

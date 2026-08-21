@@ -75,6 +75,7 @@ class Token(BaseModel):
 
 # Schema nhận dữ liệu khi lưu buổi tập (POST /api/workouts).
 # Frontend gửi camelCase, DB lưu snake_case. session_number do backend tự sinh.
+# Mở rộng: exercises chứa per-set detail để lưu vào exercise_progress (1 row = 1 set done=true).
 class WorkoutCreate(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -82,6 +83,9 @@ class WorkoutCreate(BaseModel):
     completed_sets: int = Field(ge=0, description="Số set hoàn thành (done=true)")
     avg_rpe: float | None = Field(default=None, ge=0, le=10, description="RPE trung bình trên set hoàn thành")
     duration_minutes: int = Field(ge=0, description="Thời lượng đã convert từ seconds sang minutes (round)")
+    # Per-exercise sets để lưu exercise_progress — chỉ set done=true mới được persist
+    # Shape FE gửi: [{exerciseId?, exerciseName, inputType, sets:[{reps?, time?, weight?, note?, rpe?, done}]}]
+    exercises: list[dict] | None = Field(default=None, description="Per-exercise sets để lưu exercise_progress")
 
 
 # Schema trả về cho client sau khi lưu. Kế thừa WorkoutCreate nên cũng xuất camelCase.
@@ -89,6 +93,40 @@ class WorkoutResponse(WorkoutCreate):
     id: str
     user_id: str
     session_number: int
+    created_at: str | None = None
+
+
+# ------------------- Exercise Progress -------------------
+
+# 1 row = 1 set done=true trong exercise_progress
+class ExerciseProgressCreate(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    exercise_id: str | None = Field(default=None, description="FK exercises.id, nullable cho routine custom cx-...")
+    exercise_name: str = Field(min_length=1, description="Tên bài tập (denormalized)")
+    input_type: str = Field(description="time|weight|note|reps_time")
+    set_number: int = Field(ge=1, description="1-indexed")
+    reps: int | None = Field(default=None, ge=0)
+    hold_seconds: int | None = Field(default=None, ge=0)
+    weight: float | None = Field(default=None, ge=0)
+    weight_raw: str | None = None
+    rpe: float | None = Field(default=None, ge=0, le=10)
+    raw: dict = Field(default_factory=dict, description="Snapshot gốc {time, weight, note, reps, rpe, done}")
+
+    @field_validator("input_type")
+    @classmethod
+    def normalize_input_type(cls, value: str) -> str:
+        v = value.strip().lower()
+        allowed = {"time", "weight", "note", "reps_time"}
+        if v not in allowed:
+            raise ValueError(f"input_type must be one of {', '.join(sorted(allowed))}")
+        return v
+
+
+class ExerciseProgressResponse(ExerciseProgressCreate):
+    id: str
+    user_id: str
+    workout_id: str
     created_at: str | None = None
 
 

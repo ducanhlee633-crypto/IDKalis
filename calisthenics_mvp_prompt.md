@@ -1,12 +1,10 @@
-# Thêm table db cho tạo routine trong pgae workouts
+# fetch dữ liệu cho muscle focus trong dashboảd
 
-## tổng quan
-- hiên tại app đã có db table cho các workout session nhưng khi tạo routine thì vẫn chưa lưu được. 
+## hiện tại
+- hiện tại pầhn mssucle focus trong dashboard dang hiện hình giải phẩu + phàn trăm tập từng nhóm cơ. Nhưng đó là mock data thôi nên tôi muốn bạn là theo những yêu cầu sau
 
-## Yêu cầu
-- tôi muốn bạn tạo cho tôi table tên là routines để lưu routine được tạo
-- table cần có 1. name,  category (push, pull,...), bài tập (nên lưu bàng jsonb), note, time est
-
-- tạo file routines ở backend để connect với backend rồi liên kết vô main.py để push data cho frontend.
-
-- sau đó nhớ hay xoá mock data đi
+## yêu cầu
+- hãy lấy thông tin từ bảng exercise-progess để breakdown
+- công thức tính là nếu nhóm cơ đó là chủ lực thì + 1 điểm nếu là secondary thì + 0.5 rồi lấy tổng điểm nhóm cơ đó chia cho tổng set trên tuần (tháng) để tính phần trăm (làm tương tự với các nhóm cơ khác)
+- hiển thị bài tập chủ cho phần cơ đó trong phần số liẹu khi nhấn voà(lấy 1-3 bài tập cho nhóm cơ đó nhiều nhất)
+- 

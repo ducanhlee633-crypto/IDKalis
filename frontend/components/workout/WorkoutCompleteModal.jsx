@@ -28,17 +28,20 @@ export default function WorkoutCompleteModal({
   const secs = timerSeconds % 60;
   const duration = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 
-  // Tính toán số liệu thật từ các set đã nhập
+  // Tính toán số liệu thật từ các set đã nhập — hold (time) không tính reps
   const { rows: exerciseRows, totals } = (exercises || []).reduce(
     (acc, ex) => {
       const exSets = (sets && sets[ex.id]) || [];
+      const isHold = ex.inputType === "time";
       let done = 0;
       let reps = 0;
       let hold = 0;
       exSets.forEach((s) => {
         if (s.done) done++;
-        const r = parseInt(s.reps, 10);
-        if (!Number.isNaN(r)) reps += r;
+        if (!isHold) {
+          const r = parseInt(s.reps, 10);
+          if (!Number.isNaN(r)) reps += r;
+        }
         const t = parseFloat(s.time);
         if (!Number.isNaN(t)) hold += t;
       });

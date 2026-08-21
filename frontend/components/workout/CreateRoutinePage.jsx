@@ -34,7 +34,7 @@ const fieldKeyFor = (inputType) => {
 function defaultSetsFor(inputType, count = 3) {
   const sets = [];
   for (let i = 0; i < count; i++) {
-    if (inputType === "time") sets.push({ time: "30", reps: "-", rpe: "-" });
+    if (inputType === "time") sets.push({ time: "30", rpe: "-" });
     else if (inputType === "reps_time") sets.push({ time: "30", reps: "10", rpe: "-" });
     else if (inputType === "weight") sets.push({ weight: "", reps: "8", rpe: "-" });
     else sets.push({ note: "BW", reps: "10", rpe: "-" });
@@ -138,7 +138,10 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
       prev.map((ex) => {
         if (ex.id !== exId) return ex;
         const last = ex.defaultSets[ex.defaultSets.length - 1] || {};
-        return { ...ex, defaultSets: [...ex.defaultSets, { ...last, rpe: "-" }] };
+        const nextSet = { ...last, rpe: "-" };
+        // Hold (time) không lưu reps
+        if (ex.inputType === "time") delete nextSet.reps;
+        return { ...ex, defaultSets: [...ex.defaultSets, nextSet] };
       })
     );
   };
@@ -156,12 +159,17 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
   const defaultTargetFor = (ex) => {
     const first = ex.defaultSets[0];
     if (!first) return "";
+    // Hold (time) chỉ có TIME, không có REPS
+    if (ex.inputType === "time") {
+      const t = first.time && first.time !== "-" ? `${first.time}s` : "";
+      return t ? `${ex.defaultSets.length}x${t}` : `${ex.defaultSets.length} holds`;
+    }
     const reps = first.reps && first.reps !== "-" ? `${first.reps}` : "";
     return `${ex.defaultSets.length}x${reps}`;
   };
 
   const handleSave = () => {
-    // exercises snapshot gồm reps/sets (defaultSets) để lưu jsonb
+    // exercises snapshot gồm reps/sets (defaultSets) để lưu jsonb — hold (time) bỏ reps
     const routine = {
       name: name.trim() || "Untitled Routine",
       category,
@@ -176,7 +184,11 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         muscleGroups: ex.muscleGroups,
         tips: ex.tips,
         note: ex.note,
-        defaultSets: ex.defaultSets.map((s) => ({ ...s })),
+        defaultSets: ex.defaultSets.map((s) => {
+          const clean = { ...s };
+          if (ex.inputType === "time") delete clean.reps;
+          return clean;
+        }),
       })),
     };
     onSave(routine);
@@ -316,6 +328,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
 
         {exercises.map((ex, idx) => {
           const fieldKey = fieldKeyFor(ex.inputType);
+          const isHold = ex.inputType === "time";
           return (
             <div key={ex.id} className="bg-(--surface) border border-(--line) p-5">
               {/* Exercise Header */}
@@ -363,11 +376,17 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                 </div>
               </div>
 
-              {/* Sets Table */}
-              <div className="grid grid-cols-[40px_1fr_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_1fr_40px] gap-1.5 sm:gap-2 px-2 pb-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+              {/* Sets Table — hold (time) không có REPS */}
+              <div
+                className={`grid gap-1.5 sm:gap-2 px-2 pb-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider ${
+                  isHold
+                    ? "grid-cols-[40px_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_40px]"
+                    : "grid-cols-[40px_1fr_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_1fr_40px]"
+                }`}
+              >
                 <span>SET</span>
                 <span>{fieldKey === "time" ? "TIME (S)" : fieldKey === "weight" ? "WEIGHT (KG)" : "NOTE"}</span>
-                <span>REPS</span>
+                {!isHold && <span>REPS</span>}
                 <span>RPE</span>
                 <span />
               </div>
@@ -375,7 +394,11 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
               {ex.defaultSets.map((set, setIdx) => (
                 <div
                   key={setIdx}
-                  className="grid grid-cols-[40px_1fr_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_1fr_40px] gap-1.5 sm:gap-2 items-center px-2 py-1.5"
+                  className={`grid gap-1.5 sm:gap-2 items-center px-2 py-1.5 ${
+                    isHold
+                      ? "grid-cols-[40px_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_40px]"
+                      : "grid-cols-[40px_1fr_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_1fr_40px]"
+                  }`}
                 >
                   <span className="text-xs font-bold text-zinc-400 text-center">
                     {setIdx + 1}
@@ -387,13 +410,15 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
                     placeholder="-"
                     className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
                   />
-                  <input
-                    type="text"
-                    value={set.reps || ""}
-                    onChange={(e) => updateSet(ex.id, setIdx, "reps", e.target.value)}
-                    placeholder="-"
-                    className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
-                  />
+                  {!isHold && (
+                    <input
+                      type="text"
+                      value={set.reps || ""}
+                      onChange={(e) => updateSet(ex.id, setIdx, "reps", e.target.value)}
+                      placeholder="-"
+                      className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
+                    />
+                  )}
                   <input
                     type="text"
                     value={set.rpe || ""}

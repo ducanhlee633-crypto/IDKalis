@@ -6,8 +6,6 @@ import MetricCards from "@/components/dashboard/MetricCards";
 import WeeklyActivityChart from "@/components/dashboard/WeeklyActivityChart";
 import MuscleFocusWidget from "@/components/dashboard/MuscleFocusWidget";
 import RecentWorkouts from "@/components/dashboard/RecentWorkouts";
-import TodaysPlan from "@/components/dashboard/TodaysPlan";
-import DailyProgressGauge from "@/components/dashboard/DailyProgressGauge";
 
 export default function DashboardPage() {
   return (
@@ -28,16 +26,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Section: Recent Workouts, Today's Plan Timeline, Daily Progress Gauge */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* Bottom Section: Recent Workouts */}
+      <div className="grid grid-cols-1 gap-5">
         <div className="min-h-[290px]">
           <RecentWorkouts />
-        </div>
-        <div className="min-h-[290px]">
-          <TodaysPlan />
-        </div>
-        <div className="min-h-[290px] md:col-span-2 lg:col-span-1">
-          <DailyProgressGauge />
         </div>
       </div>
     </div>

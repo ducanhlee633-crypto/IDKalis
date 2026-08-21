@@ -7,6 +7,7 @@ export default function ExerciseBlock({
   exercise,
   exerciseIndex,
   sets,
+  previousSets = [],
   onSetChange,
   onAddSet,
   onToggleDone,
@@ -40,6 +41,39 @@ export default function ExerciseBlock({
   };
 
   const fieldKey = getFieldKey();
+  const isHold = exercise.inputType === "time";
+
+  // Helpers: lấy placeholder previous cho từng set (chỉ hiển thị nếu có data)
+  const getPrevPrimary = (prev) => {
+    if (!prev) return null;
+    if (fieldKey === "time") {
+      if (prev.holdSeconds != null) return String(prev.holdSeconds);
+      if (prev.raw?.time != null && String(prev.raw.time).trim() !== "") return String(prev.raw.time).trim();
+      return null;
+    }
+    if (fieldKey === "weight") {
+      if (prev.weightRaw != null && String(prev.weightRaw).trim() !== "") return String(prev.weightRaw).trim();
+      if (prev.weight != null) return String(prev.weight);
+      if (prev.raw?.weight != null && String(prev.raw.weight).trim() !== "") return String(prev.raw.weight).trim();
+      return null;
+    }
+    // note
+    if (prev.raw?.note != null && String(prev.raw.note).trim() !== "") return String(prev.raw.note).trim();
+    if (prev.weightRaw) return String(prev.weightRaw);
+    return null;
+  };
+  const getPrevReps = (prev) => {
+    if (!prev) return null;
+    if (prev.reps != null) return String(prev.reps);
+    if (prev.raw?.reps != null && String(prev.raw.reps).trim() !== "") return String(prev.raw.reps).trim();
+    return null;
+  };
+  const getPrevRpe = (prev) => {
+    if (!prev) return null;
+    if (prev.rpe != null) return String(prev.rpe);
+    if (prev.raw?.rpe != null && String(prev.raw.rpe).trim() !== "") return String(prev.raw.rpe).trim();
+    return null;
+  };
 
   return (
     <div className="bg-(--surface) border border-(--line) p-5 relative">
@@ -66,19 +100,27 @@ export default function ExerciseBlock({
         </button>
       </div>
 
-      {/* Set Table */}
+      {/* Set Table — hold (time) ẩn REPS */}
       <div className="space-y-0">
         {/* Column Headers */}
-        <div className="grid grid-cols-[40px_1fr_1fr_1fr_40px] sm:grid-cols-[50px_1fr_1fr_1fr_50px] gap-1.5 sm:gap-2 px-2 pb-2">
+        <div
+          className={`grid gap-1.5 sm:gap-2 px-2 pb-2 ${
+            isHold
+              ? "grid-cols-[40px_1fr_1fr_40px] sm:grid-cols-[50px_1fr_1fr_50px]"
+              : "grid-cols-[40px_1fr_1fr_1fr_40px] sm:grid-cols-[50px_1fr_1fr_1fr_50px]"
+          }`}
+        >
           <span className="text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em]">
             SET
           </span>
           <span className="text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em]">
             {getColumnLabel()}
           </span>
-          <span className="text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em]">
-            REPS
-          </span>
+          {!isHold && (
+            <span className="text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em]">
+              REPS
+            </span>
+          )}
           <span className="text-[10px] font-semibold text-(--faint) uppercase tracking-[0.18em]">
             RPE
           </span>
@@ -93,11 +135,19 @@ export default function ExerciseBlock({
             !set.done &&
             (setIdx === 0 || sets[setIdx - 1]?.done);
           const isDone = set.done;
+          const prev = previousSets[setIdx] || null;
+          const prevPrimary = getPrevPrimary(prev);
+          const prevReps = getPrevReps(prev);
+          const prevRpe = getPrevRpe(prev);
 
           return (
             <div
               key={setIdx}
-              className={`grid grid-cols-[40px_1fr_1fr_1fr_40px] sm:grid-cols-[50px_1fr_1fr_1fr_50px] gap-1.5 sm:gap-2 items-center px-2 py-1.5 transition-all ${
+              className={`grid gap-1.5 sm:gap-2 items-center px-2 py-1.5 transition-all ${
+                isHold
+                  ? "grid-cols-[40px_1fr_1fr_40px] sm:grid-cols-[50px_1fr_1fr_50px]"
+                  : "grid-cols-[40px_1fr_1fr_1fr_40px] sm:grid-cols-[50px_1fr_1fr_1fr_50px]"
+              } ${
                 isActive
                   ? "border-l-2 border-l-(--accent) bg-(--accent-soft)"
                   : isDone
@@ -114,37 +164,42 @@ export default function ExerciseBlock({
                 {setIdx + 1}
               </span>
 
-              {/* Primary Input (Time/Weight/Note) */}
+              {/* Primary Input (Time/Weight/Note) — placeholder = previous */}
               <input
                 type="text"
                 value={set[fieldKey] || ""}
                 onChange={(e) =>
                   onSetChange(exercise.id, setIdx, fieldKey, e.target.value)
                 }
-                className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
-                placeholder="-"
+                className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-zinc-500"
+                placeholder={prevPrimary ?? "-"}
+                title={prevPrimary ? `Previous: ${prevPrimary}` : undefined}
               />
 
-              {/* Reps */}
-              <input
-                type="text"
-                value={set.reps || ""}
-                onChange={(e) =>
-                  onSetChange(exercise.id, setIdx, "reps", e.target.value)
-                }
-                className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
-                placeholder="-"
-              />
+              {/* Reps — ẩn khi hold time, placeholder = previous reps */}
+              {!isHold && (
+                <input
+                  type="text"
+                  value={set.reps || ""}
+                  onChange={(e) =>
+                    onSetChange(exercise.id, setIdx, "reps", e.target.value)
+                  }
+                  className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-zinc-500"
+                  placeholder={prevReps ?? "-"}
+                  title={prevReps ? `Previous: ${prevReps}` : undefined}
+                />
+              )}
 
-              {/* RPE */}
+              {/* RPE — placeholder previous RPE nếu có */}
               <input
                 type="text"
                 value={set.rpe || ""}
                 onChange={(e) =>
                   onSetChange(exercise.id, setIdx, "rpe", e.target.value)
                 }
-                className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
-                placeholder="-"
+                className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-zinc-500"
+                placeholder={prevRpe ?? "-"}
+                title={prevRpe ? `Previous RPE: ${prevRpe}` : undefined}
               />
 
               {/* Done Checkbox - 44px touch target */}

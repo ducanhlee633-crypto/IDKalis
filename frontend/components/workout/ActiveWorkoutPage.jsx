@@ -17,7 +17,7 @@ import ExerciseInfoModal from "./ExerciseInfoModal";
 import WorkoutSummaryModal from "./WorkoutSummaryModal";
 import WorkoutCompleteModal from "./WorkoutCompleteModal";
 import { getStoredSession } from "@/lib/auth";
-import { apiCreateWorkout } from "@/lib/workouts";
+import { apiCreateWorkout, apiGetPreviousSets } from "@/lib/workouts";
 
 const REST_DEFAULT_SECONDS = 90;
 const REST_MIN_SECONDS = 0;
@@ -35,50 +35,93 @@ function getInitialRestDefault() {
 }
 
 function playRestDoneSound() {
+  // Boxing bell: 3 gongs loud & long (~2.8s)
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (AudioCtx) {
       const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.28, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.55);
-      // close context after
+      // iOS / autoplay policy: resume if suspended
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      const now = ctx.currentTime;
+      const HITS = 3;
+      const HIT_GAP = 0.42; // seconds between gongs
+      const DECAY = 1.35; // long tail per hit
+
+      for (let i = 0; i < HITS; i++) {
+        const t0 = now + i * HIT_GAP;
+        // per-hit gain node (so hits overlap and decay naturally)
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0, t0);
+        // sharp attack
+        gain.gain.linearRampToValueAtTime(0.92, t0 + 0.02);
+        // long exponential decay like real bell
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + DECAY);
+        gain.connect(ctx.destination);
+
+        // fundamental + octave + fifth for rich bell timbre
+        const freqs = [
+          { f: 820, vol: 1.0, type: "sine" },
+          { f: 1640, vol: 0.42, type: "sine" }, // octave
+          { f: 1220, vol: 0.28, type: "triangle" }, // fifth-ish, adds bite
+        ];
+        freqs.forEach(({ f, vol, type }) => {
+          const osc = ctx.createOscillator();
+          const oscGain = ctx.createGain();
+          osc.type = type;
+          // slight detune down over decay to mimic bell
+          osc.frequency.setValueAtTime(f, t0);
+          osc.frequency.exponentialRampToValueAtTime(f * 0.985, t0 + DECAY);
+          oscGain.gain.setValueAtTime(vol, t0);
+          oscGain.gain.exponentialRampToValueAtTime(0.001, t0 + DECAY);
+          osc.connect(oscGain);
+          oscGain.connect(gain);
+          osc.start(t0);
+          osc.stop(t0 + DECAY + 0.05);
+        });
+
+        // low thump for body
+        const lowOsc = ctx.createOscillator();
+        const lowGain = ctx.createGain();
+        lowOsc.type = "sine";
+        lowOsc.frequency.setValueAtTime(180, t0);
+        lowGain.gain.setValueAtTime(0.35, t0);
+        lowGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.45);
+        lowOsc.connect(lowGain);
+        lowGain.connect(gain);
+        lowOsc.start(t0);
+        lowOsc.stop(t0 + 0.5);
+      }
+
+      // close after all tails
       setTimeout(() => {
         try {
           ctx.close();
         } catch {}
-      }, 700);
+      }, (HITS * HIT_GAP + DECAY) * 1000 + 400);
     } else {
-      // fallback beep via audio element if no AudioContext
       const audio = new Audio(
         "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="
       );
-      audio.volume = 0.5;
+      audio.volume = 0.85;
       audio.play().catch(() => {});
     }
   } catch {}
   try {
-    if (navigator.vibrate) navigator.vibrate([220, 80, 220]);
+    if (navigator.vibrate) navigator.vibrate([380, 90, 380, 90, 620]);
   } catch {}
 }
 
 export default function ActiveWorkoutPage({ program, onFinish }) {
-  // Initialize sets state from program exercises
+  // Initialize sets state from program exercises — hold (time) bỏ reps
   const [sets, setSets] = useState(() => {
     const initial = {};
     program.exercises.forEach((ex) => {
-      initial[ex.id] = ex.defaultSets.map((s) => ({
-        ...s,
-        done: false,
-      }));
+      const isHold = ex.inputType === "time";
+      initial[ex.id] = ex.defaultSets.map((s) => {
+        const clean = { ...s, done: false };
+        if (isHold) delete clean.reps;
+        return clean;
+      });
     });
     return initial;
   });
@@ -92,6 +135,34 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const moreMenuRef = useRef(null);
+
+  // Previous sets map: { [exerciseName]: [{setNumber, reps, holdSeconds, weight, weightRaw, rpe}] }
+  const [previousMap, setPreviousMap] = useState({});
+
+  // Fetch previous sets (exercise_progress) for placeholder — per user, latest workout per exercise
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchPrevious() {
+      try {
+        const session = getStoredSession();
+        const token = session?.token;
+        if (!token) return;
+        const names = (program.exercises || []).map((e) => e.name).filter(Boolean);
+        if (names.length === 0) return;
+        const data = await apiGetPreviousSets(token, names);
+        if (!cancelled) setPreviousMap(data || {});
+      } catch (e) {
+        // Silent: không block workout nếu fetch fail (chưa có data hoặc chưa chạy migration)
+        console.warn("[ActiveWorkout] previous-sets fetch failed:", e?.message || e);
+        if (!cancelled) setPreviousMap({});
+      }
+    }
+    fetchPrevious();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [program.id]);
 
   // ── Rest Timer state ─────────────────────────────
   const [restRemaining, setRestRemaining] = useState(() => getInitialRestDefault());
@@ -156,10 +227,9 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
             clearInterval(restIntervalRef.current);
             restIntervalRef.current = null;
           }
-          // play sound + haptic then auto hide
+          // play boxing bell (~2.6s) then auto hide — keep 00:00 visible during ring
           playRestDoneSound();
-          // delay hide to let user see 00:00 briefly
-          setTimeout(() => setRestActive(false), 1100);
+          setTimeout(() => setRestActive(false), 2850);
           return 0;
         }
         return prev - 1;
@@ -201,7 +271,7 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
         restIntervalRef.current = null;
       }
       playRestDoneSound();
-      setTimeout(() => setRestActive(false), 600);
+      setTimeout(() => setRestActive(false), 2850);
     }
   }, [restRemaining, restTotal, persistRestDefault]);
 
@@ -273,8 +343,9 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
       const exercise = program.exercises.find((ex) => ex.id === exerciseId);
       const lastSet = updated[exerciseId][updated[exerciseId].length - 1];
 
-      // Create new set based on last set values
+      // Create new set based on last set values — hold (time) không có reps
       const newSet = { ...lastSet, done: false, rpe: "-" };
+      if (exercise?.inputType === "time") delete newSet.reps;
       updated[exerciseId] = [...updated[exerciseId], newSet];
       return updated;
     });
@@ -311,6 +382,7 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
   };
 
   // Save session -> gọi POST /api/workouts rồi show congratulation board
+  // Kèm exercises per-set để lưu vào exercise_progress (chỉ done=true)
   const handleSave = async () => {
     const { completedSets, avgRpe, durationMinutes } = computeWorkoutStats();
     const session = getStoredSession();
@@ -325,11 +397,33 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
     setIsSaving(true);
     setSaveError(null);
     try {
+      // Build exercises payload cho exercise_progress (1 row = 1 set done=true)
+      const exercisesPayload = (program.exercises || []).map((ex) => {
+        const exSets = sets[ex.id] || [];
+        return {
+          exerciseId: ex.id,
+          exerciseName: ex.name,
+          inputType: ex.inputType,
+          muscleGroups: ex.muscleGroups || ex.muscle_groups || [],
+          primaryMuscles: ex.primaryMuscles || ex.primary_muscles || [],
+          secondaryMuscles: ex.secondaryMuscles || ex.secondary_muscles || [],
+          sets: exSets.map((s) => ({
+            reps: s.reps,
+            time: s.time,
+            weight: s.weight,
+            note: s.note,
+            rpe: s.rpe,
+            done: !!s.done,
+          })),
+        };
+      });
+
       const res = await apiCreateWorkout(token, {
         name: program.name,
         completedSets,
         avgRpe,
         durationMinutes,
+        exercises: exercisesPayload,
       });
       // Backend trả về camelCase (sessionNumber) hoặc snake_case (session_number)
       const serverSession = res.sessionNumber ?? res.session_number ?? getNextSessionNumber();
@@ -463,6 +557,7 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
             exercise={exercise}
             exerciseIndex={idx}
             sets={sets[exercise.id] || []}
+            previousSets={previousMap[exercise.name] || []}
             onSetChange={handleSetChange}
             onAddSet={handleAddSet}
             onToggleDone={handleToggleDone}

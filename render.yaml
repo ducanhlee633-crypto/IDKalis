@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: idk-calis-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    autoDeploy: false
+    healthCheckPath: /
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      # QUAN TRỌNG: chỉ cần set Vercel production URL(s). Localhost đã auto cho phép.
+      # Ví dụ: https://idkalis.vercel.app
+      # Nếu có nhiều Vercel preview domains, cách nhau dấu phẩy:
+      # CORS_ORIGINS=https://idkalis.vercel.app,https://idkalis-abc123.vercel.app
+      - key: CORS_ORIGINS
+        value: https://your-app.vercel.app

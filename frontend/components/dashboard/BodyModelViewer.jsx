@@ -1,7 +1,7 @@
 "use client";
 
-import React, { memo, useCallback, useRef, useState } from "react";
-import { MUSCLE_FOCUS_DATA } from "@/data/mockCalisthenicsData";
+import React, { memo, useCallback, useRef, useState, useMemo } from "react";
+import { MUSCLE_FOCUS_DATA as FALLBACK_MUSCLE_DATA } from "@/data/mockCalisthenicsData";
 
 /**
  * BodyModelViewer — Premium Anatomical Human v2.1
@@ -14,7 +14,18 @@ import { MUSCLE_FOCUS_DATA } from "@/data/mockCalisthenicsData";
  * - Chi tiết sợi cơ giảm white-gap, dùng highlight mờ thay vì vạch đen thô
  */
 
-const MUSCLE_BY_ID = Object.fromEntries(MUSCLE_FOCUS_DATA.map((m) => [m.id, m]));
+function normalizeMuscleData(raw) {
+  if (!Array.isArray(raw) || raw.length === 0) return FALLBACK_MUSCLE_DATA;
+  return raw.map((m) => {
+    // BE returns exercises as [{name,count}] or string[]; UI expects string[] for tooltip
+    let exList = [];
+    if (Array.isArray(m.exercises)) {
+      if (m.exercises.length > 0 && typeof m.exercises[0] === "object") exList = m.exercises.map((e) => e.name);
+      else exList = m.exercises;
+    } else if (Array.isArray(m.exercisesStr)) exList = m.exercisesStr;
+    return { ...m, exercises: exList };
+  });
+}
 
 /* FRONT — vai rộng, core liền */
 const FRONT_ANATOMY = {
@@ -379,13 +390,15 @@ const MuscleGroupLayer = memo(function MuscleGroupLayer({ groupId, group, active
   );
 });
 
-export default function BodyModelViewer({ selectedMuscle = null, onSelectMuscle = () => {}, hoveredMuscle = null, onHoverMuscle = () => {} }) {
+export default function BodyModelViewer({ selectedMuscle = null, onSelectMuscle = () => {}, hoveredMuscle = null, onHoverMuscle = () => {}, muscleData }) {
   const [activeTab, setActiveTab] = useState("all");
   const viewportRef = useRef(null);
   const tooltipRef = useRef(null);
   const hoveredRef = useRef(null);
+  const normalized = useMemo(() => normalizeMuscleData(muscleData), [muscleData]);
+  const muscleById = useMemo(() => Object.fromEntries(normalized.map((m) => [m.id, m])), [normalized]);
   const activeMuscle = hoveredMuscle || selectedMuscle;
-  const activeData = activeMuscle ? MUSCLE_BY_ID[activeMuscle] : null;
+  const activeData = activeMuscle ? muscleById[activeMuscle] : null;
   const positionTooltip = useCallback((e) => {
     const el = tooltipRef.current;
     const rect = viewportRef.current?.getBoundingClientRect();

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 
-from routers import auth, exercises, goals, routines, training_schedule, workouts
+from routers import auth, dashboard, exercises, goals, routines, training_schedule, workouts
 
 # Entry point của backend: chạy bằng `uv run uvicorn main:app --reload --port 8000`
 app = FastAPI(title="Calisthenics API", version="0.1.0")
@@ -57,6 +57,9 @@ app.include_router(goals.router)
 
 # Gắn router training-schedule (các endpoint /api/training-schedule) vào app — bắt buộc login, FK tới routines, per-user RLS
 app.include_router(training_schedule.router)
+
+# Gắn router dashboard (muscle focus breakdown từ exercise_progress)
+app.include_router(dashboard.router)
 
 
 # Endpoint kiểm tra sức khỏe: GET http://localhost:8000/

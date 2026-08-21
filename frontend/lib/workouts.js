@@ -24,7 +24,8 @@ async function safeFetch(url, options) {
 }
 
 // POST /api/workouts — lưu buổi tập (bắt buộc login, FK tới users)
-// payload: { name, completedSets, avgRpe, durationMinutes } (camelCase)
+// payload: { name, completedSets, avgRpe, durationMinutes, exercises?: [{exerciseId?, exerciseName, inputType, sets:[{reps?, time?, weight?, note?, rpe?, done}]}] } (camelCase)
+// Chỉ set done=true mới được persist vào exercise_progress per-set
 // trả về WorkoutResponse { id, userId, name, completedSets, avgRpe, durationMinutes, sessionNumber, createdAt }
 export async function apiCreateWorkout(token, payload) {
   const res = await safeFetch(`${API_BASE}/api/workouts`, {
@@ -39,9 +40,49 @@ export async function apiCreateWorkout(token, payload) {
   return res.json();
 }
 
+// POST /api/workouts/previous-sets — batch lấy previous sets cho placeholder
+// payload: { exerciseNames: string[] }
+// trả về dict { "Planche Lean": [{setNumber, reps, holdSeconds, weight, weightRaw, rpe, inputType, raw}], ... }
+// Mỗi exercise chỉ lấy sets của workout gần nhất chứa exercise đó
+export async function apiGetPreviousSets(token, exerciseNames) {
+  const names = Array.isArray(exerciseNames) ? exerciseNames.filter(Boolean) : [];
+  if (names.length === 0) return {};
+  const res = await safeFetch(`${API_BASE}/api/workouts/previous-sets`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ exerciseNames: names }),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+// GET /api/workouts/previous-sets?names=... — alias GET để test nhanh (dự phòng POST fail)
+export async function apiGetPreviousSetsGet(token, exerciseNames) {
+  const names = Array.isArray(exerciseNames) ? exerciseNames.filter(Boolean) : [];
+  if (names.length === 0) return {};
+  const q = encodeURIComponent(names.join(","));
+  const res = await safeFetch(`${API_BASE}/api/workouts/previous-sets?names=${q}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
 // GET /api/workouts — danh sách (chỉ dùng cho docs/test, chưa có UI)
 export async function apiListWorkouts(token) {
   const res = await safeFetch(`${API_BASE}/api/workouts`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+// GET /api/workouts/stats/summary — dashboard metrics (workout time & RPE thực từ table workouts)
+export async function apiGetWorkoutStats(token) {
+  const res = await safeFetch(`${API_BASE}/api/workouts/stats/summary`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(await parseError(res));

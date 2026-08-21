@@ -1,9 +1,32 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import BodyModelViewer from "./BodyModelViewer";
-import { MUSCLE_FOCUS_DATA } from "@/data/mockCalisthenicsData";
+import { MUSCLE_FOCUS_DATA as FALLBACK_DATA } from "@/data/mockCalisthenicsData";
 import { ChevronDown, Flame } from "lucide-react";
+import { getStoredSession } from "@/lib/auth";
+import { apiGetMuscleFocus } from "@/lib/dashboard";
+
+function normalizeGroups(rawGroups) {
+  if (!Array.isArray(rawGroups) || rawGroups.length === 0) return null;
+  return rawGroups.map((g) => {
+    let exercises = [];
+    let exercisesWithCount = [];
+    if (Array.isArray(g.exercises)) {
+      if (g.exercises.length > 0 && typeof g.exercises[0] === "object" && g.exercises[0] !== null && "name" in g.exercises[0]) {
+        exercisesWithCount = g.exercises;
+        exercises = g.exercises.map((e) => e.name);
+      } else {
+        exercises = g.exercises;
+        exercisesWithCount = g.exercises.map((name) => ({ name, count: 0 }));
+      }
+    } else if (Array.isArray(g.exercisesStr)) {
+      exercises = g.exercisesStr;
+      exercisesWithCount = g.exercisesStr.map((name) => ({ name, count: 0 }));
+    }
+    return { ...g, exercises, exercisesWithCount };
+  });
+}
 
 export default function MuscleFocusWidget() {
   const [selectedMuscle, setSelectedMuscle] = useState(null);
@@ -11,15 +34,70 @@ export default function MuscleFocusWidget() {
   const [timeRange, setTimeRange] = useState("THIS WEEK");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  const [groups, setGroups] = useState(normalizeGroups(FALLBACK_DATA));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [meta, setMeta] = useState({ totalSets: 0, totalPoints: 0, isFallback: true, skippedSets: 0 });
+
   const activeMuscleId = hoveredMuscle || selectedMuscle;
-  const topMuscle = useMemo(
-    () => MUSCLE_FOCUS_DATA.reduce((max, m) => (m.percentage > max.percentage ? m : max), MUSCLE_FOCUS_DATA[0]),
-    [],
-  );
+
+  const topMuscle = useMemo(() => {
+    if (!groups || groups.length === 0) return FALLBACK_DATA[0];
+    return groups.reduce((max, m) => (m.percentage > max.percentage ? m : max), groups[0]);
+  }, [groups]);
 
   const handleSelectMuscle = (id) => {
     setSelectedMuscle(selectedMuscle === id ? null : id);
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchData() {
+      const session = getStoredSession();
+      if (!session?.token) {
+        // no token -> keep fallback but mark
+        if (!cancelled) {
+          setGroups(normalizeGroups(FALLBACK_DATA));
+          setMeta((prev) => ({ ...prev, isFallback: true }));
+          setError(null);
+          setLoading(false);
+        }
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await apiGetMuscleFocus(session.token, timeRange);
+        if (cancelled) return;
+        const normalized = normalizeGroups(data.groups);
+        if (normalized) {
+          setGroups(normalized);
+          setMeta({
+            totalSets: data.totalSets ?? 0,
+            totalPoints: data.totalPoints ?? 0,
+            skippedSets: data.skippedSets ?? 0,
+            isFallback: false,
+            from: data.from,
+            to: data.to,
+          });
+        }
+      } catch (e) {
+        if (cancelled) return;
+        // keep fallback data visible, show error banner
+        setError(e?.message || "Failed to load muscle focus");
+        // if we already have real data, keep it; otherwise fallback remains
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchData();
+    return () => {
+      cancelled = true;
+    };
+  }, [timeRange]);
+
+  const isEmpty = !loading && !error && meta.totalPoints === 0 && !meta.isFallback;
+  const showFallbackBadge = meta.isFallback && !loading;
 
   return (
     <div className="relative bg-(--surface) border border-(--line) p-5 square-frame flex flex-col h-full">
@@ -29,8 +107,12 @@ export default function MuscleFocusWidget() {
           <div className="flex items-center gap-2">
             <span className="w-4 h-px bg-(--accent)" />
             <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">Muscle focus</h3>
+            {loading && <span className="w-3 h-3 border border-zinc-600 border-t-[#0ea5e9] rounded-full animate-spin ml-1" />}
+            {showFallbackBadge && <span className="text-[9px] px-1.5 py-0.5 border border-amber-500/30 text-amber-400 bg-amber-500/10">DEMO</span>}
           </div>
-          <p className="text-[10px] text-(--faint) mt-0.5 tracking-wide">Calisthenics skills breakdown</p>
+          <p className="text-[10px] text-(--faint) mt-0.5 tracking-wide">
+            Calisthenics skills breakdown{!meta.isFallback && meta.totalSets > 0 ? ` · ${meta.totalSets} sets` : ""}
+          </p>
         </div>
 
         {/* Dropdown Time Range */}
@@ -64,6 +146,42 @@ export default function MuscleFocusWidget() {
         </div>
       </div>
 
+      {error && (
+        <div className="mb-3 text-[11px] px-2.5 py-1.5 border border-red-500/30 bg-red-500/10 text-red-300 flex items-center justify-between gap-2">
+          <span className="line-clamp-2">{error}</span>
+          <button
+            onClick={() => {
+              setError(null);
+              // trigger refetch by toggling range state
+              setTimeRange((prev) => prev);
+              // force effect re-run via temp loading
+              const session = getStoredSession();
+              if (session?.token) {
+                setLoading(true);
+                apiGetMuscleFocus(session.token, timeRange)
+                  .then((data) => {
+                    const n = normalizeGroups(data.groups);
+                    if (n) setGroups(n);
+                    setMeta({ totalSets: data.totalSets ?? 0, totalPoints: data.totalPoints ?? 0, skippedSets: data.skippedSets ?? 0, isFallback: false });
+                    setError(null);
+                  })
+                  .catch((e) => setError(e?.message || "Failed to load"))
+                  .finally(() => setLoading(false));
+              }
+            }}
+            className="shrink-0 text-[10px] px-2 py-0.5 border border-red-400/30 hover:bg-red-500/20 transition"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {isEmpty && (
+        <div className="mb-3 text-[11px] px-2.5 py-2 border border-white/10 bg-white/[0.02] text-zinc-400 text-center">
+          Chưa có dữ liệu tập trong {timeRange.toLowerCase()}. Hãy hoàn thành 1 buổi tập để xem breakdown.
+        </div>
+      )}
+
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 flex-1 min-h-0">
         {/* Left: Body Model Canvas */}
@@ -79,14 +197,18 @@ export default function MuscleFocusWidget() {
             onSelectMuscle={handleSelectMuscle}
             hoveredMuscle={hoveredMuscle}
             onHoverMuscle={setHoveredMuscle}
+            muscleData={groups}
           />
         </div>
 
         {/* Right: Muscle Percentage Breakdown */}
         <div className="md:col-span-5 flex flex-col justify-center space-y-1.5 px-0.5">
-          {MUSCLE_FOCUS_DATA.map((item) => {
+          {(groups || FALLBACK_DATA).map((item) => {
             const isActive = activeMuscleId === item.id;
             const isSelected = selectedMuscle === item.id;
+            const pct = typeof item.percentage === "number" ? item.percentage : 0;
+            const exercises = item.exercises || [];
+            const exercisesWithCount = item.exercisesWithCount || exercises.map((name) => ({ name, count: 0 }));
             return (
               <div
                 key={item.id}
@@ -97,7 +219,7 @@ export default function MuscleFocusWidget() {
                   isActive
                     ? "border-[#0ea5e9] bg-[rgba(14,165,255,0.08)]"
                     : "border-transparent hover:bg-white/[0.02]"
-                }`}
+                } ${loading ? "opacity-60" : ""}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -131,7 +253,7 @@ export default function MuscleFocusWidget() {
                       isActive ? "text-[#0ea5e9] font-bold" : "text-(--faint) group-hover:text-(--muted)"
                     }`}
                   >
-                    {item.percentage}%
+                    {pct}%
                   </span>
                 </div>
 
@@ -141,21 +263,27 @@ export default function MuscleFocusWidget() {
                     className={`h-full transition-all duration-300 ${
                       isActive ? "bg-[#0ea5e9] shadow-[0_0_6px_rgba(14,165,255,0.5)]" : "bg-zinc-700 group-hover:bg-zinc-500"
                     }`}
-                    style={{ width: `${item.percentage * 3.5}%` }}
+                    style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
                   />
                 </div>
 
                 {/* Exercises (chỉ hiện khi chọn) */}
                 {isSelected && (
                   <div className="flex flex-wrap gap-1 mt-1.5 animate-fade-in">
-                    {item.exercises.map((ex) => (
-                      <span
-                        key={ex}
-                        className="text-[8.5px] px-1.5 py-0.5 bg-(--surface-3) border border-(--line) text-(--muted)"
-                      >
-                        {ex}
-                      </span>
-                    ))}
+                    {exercises.length > 0 ? (
+                      exercisesWithCount.map((ex) => (
+                        <span
+                          key={ex.name}
+                          className="text-[8.5px] px-1.5 py-0.5 bg-(--surface-3) border border-(--line) text-(--muted) flex items-center gap-1"
+                          title={ex.count ? `${ex.count} sets` : undefined}
+                        >
+                          <span>{ex.name}</span>
+                          {ex.count > 0 && <span className="text-[7px] px-1 py-px bg-white/10 border border-white/10 rounded-sm">{ex.count}</span>}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[8.5px] text-(--faint) italic">Không có bài tập nổi bật trong khoảng này</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -166,7 +294,9 @@ export default function MuscleFocusWidget() {
 
       {/* Footer Summary */}
       <div className="flex items-center justify-between pt-3 mt-3 border-t border-(--line) text-[10px]">
-        <span className="uppercase tracking-[0.18em] text-(--faint)">Total focus · 100%</span>
+        <span className="uppercase tracking-[0.18em] text-(--faint)">
+          {isEmpty ? "No data" : `Total focus · ${meta.isFallback ? "DEMO" : `${groups.reduce((s, g) => s + (g.percentage || 0), 0).toFixed(1)}%`}`}
+        </span>
         <span className="flex items-center gap-1.5 text-[#0ea5e9]">
           <Flame className="w-3 h-3" />
           <span className="uppercase tracking-wider">
