@@ -575,6 +575,385 @@ def get_performance_trend(
     }
 
 
+@router.get("/training-consistency")
+def get_training_consistency(
+    weeks: int = Query(4, ge=1, le=12, description="Number of weeks to display (1-12), default 4"),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Heatmap & stats cho Training Consistency dựa trên training_schedule + workouts."""
+    from datetime import time as dt_time
+
+    user_id = current_user["id"]
+    today = datetime.now(timezone.utc).date()
+    days_since_monday = today.weekday()  # Mon=0
+    this_monday = today - timedelta(days=days_since_monday)
+    start_monday = this_monday - timedelta(days=(weeks - 1) * 7)
+    end_sunday = start_monday + timedelta(days=weeks * 7 - 1)
+
+    from_dt = datetime.combine(start_monday, dt_time.min, tzinfo=timezone.utc)
+    to_dt = datetime.now(timezone.utc)  # up to now, not future
+
+    # --- Dev-user mock ---
+    if user_id == "dev-user":
+        # Mock schedule: 5 days/week (Mon-Fri)
+        mock_schedule = [
+            {"day_of_week": 0, "routine_id": "mock-push", "routine_name": "Push & Planche"},
+            {"day_of_week": 1, "routine_id": "mock-pull", "routine_name": "Pull & Front Lever"},
+            {"day_of_week": 2, "routine_id": "mock-hand", "routine_name": "Handstand & Mobility"},
+            {"day_of_week": 3, "routine_id": "mock-upper", "routine_name": "Upper Body Power"},
+            {"day_of_week": 4, "routine_id": "mock-core", "routine_name": "L-Sit & Core"},
+            {"day_of_week": 5, "routine_id": None, "routine_name": None},
+            {"day_of_week": 6, "routine_id": None, "routine_name": None},
+        ]
+        trainingDaysPerWeek = 5
+        restDaysPerWeek = 2
+        # Build matrix with same logic but use mock workouts set to simulate 86% consistency
+        # Mock workout dates: all Mon-Fri except a few misses to get 86%
+        mock_workout_dates = set()
+        for w in range(weeks):
+            base = start_monday + timedelta(days=w * 7)
+            for d in range(7):
+                cur = base + timedelta(days=d)
+                if cur > today:
+                    continue
+                dow = cur.weekday()
+                # Miss on Sat of week0 and Fri of week1 pattern, else train on scheduled days
+                is_miss = (w == 0 and dow in (5, 6)) or (w == 1 and dow == 4)
+                if dow < 5 and not is_miss:
+                    mock_workout_dates.add(cur.isoformat())
+                elif w == 1 and dow == 5:  # Sat trained in week1
+                    mock_workout_dates.add(cur.isoformat())
+                elif w == 2 and dow == 5:  # Sat rest but not missed (rest)
+                    pass
+        # Now build matrix
+        matrix = []
+        expectedPast = 0
+        trainedOnScheduled = 0
+        trainedTotal = 0
+        restCount = 0
+        missedCount = 0
+        pastDays = 0
+        # Also build list of all dates for streak calc
+        compliance_streak_candidates = []
+        training_dates_sorted = sorted(mock_workout_dates)
+        for w in range(weeks):
+            row = []
+            for d in range(7):
+                cur = start_monday + timedelta(days=w * 7 + d)
+                dow = cur.weekday()
+                sched = next((s for s in mock_schedule if s["day_of_week"] == dow), {"routine_id": None, "routine_name": None})
+                scheduled = sched["routine_id"] is not None
+                is_future = cur > today
+                date_iso = cur.isoformat()
+                date_display = cur.strftime("%b %d")
+                day_label = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][dow]
+                has_workout = date_iso in mock_workout_dates
+                if is_future:
+                    state = "future"
+                elif has_workout:
+                    state = "trained"
+                elif not scheduled:
+                    state = "rest"
+                else:
+                    state = "missed"
+                label = sched["routine_name"] if scheduled and sched["routine_name"] else "Rest Day"
+                if state == "trained":
+                    # keep routine name
+                    pass
+                elif state == "missed":
+                    label = f"Missed: {label}" if scheduled else "Missed Session"
+                elif state == "rest":
+                    label = "Rest Day"
+                elif state == "future":
+                    label = "Upcoming"
+
+                if not is_future:
+                    pastDays += 1
+                    if scheduled:
+                        expectedPast += 1
+                        if has_workout:
+                            trainedOnScheduled += 1
+                        else:
+                            missedCount += 1
+                    else:
+                        if not has_workout:
+                            restCount += 1
+                    if has_workout:
+                        trainedTotal += 1
+
+                row.append({
+                    "date": date_iso,
+                    "date_display": date_display,
+                    "day": day_label,
+                    "day_of_week": dow,
+                    "state": state,
+                    "label": label,
+                    "routine_name": sched["routine_name"],
+                    "routine_id": sched["routine_id"],
+                    "is_future": is_future,
+                    "scheduled": scheduled,
+                })
+            matrix.append(row)
+
+        # streak: longest consecutive trained days (calendar consecutive)
+        training_dates = sorted([d for d in mock_workout_dates if d <= today.isoformat()])
+        best_streak = 0
+        cur_streak = 0
+        prev_date = None
+        for ds in training_dates:
+            cur_d = datetime.fromisoformat(ds).date()
+            if prev_date and (cur_d - prev_date).days == 1:
+                cur_streak += 1
+            else:
+                cur_streak = 1
+            best_streak = max(best_streak, cur_streak)
+            prev_date = cur_d
+
+        consistency = round(trainedOnScheduled / expectedPast * 100) if expectedPast else 0
+
+        return {
+            "weeks": weeks,
+            "from": start_monday.isoformat(),
+            "to": end_sunday.isoformat(),
+            "today": today.isoformat(),
+            "schedule": mock_schedule,
+            "trainingDaysPerWeek": trainingDaysPerWeek,
+            "restDaysPerWeek": restDaysPerWeek,
+            "totalExpectedFull": trainingDaysPerWeek * weeks,
+            "matrix": matrix,
+            "stats": {
+                "trainingDaysPerWeek": trainingDaysPerWeek,
+                "restDaysPerWeek": restDaysPerWeek,
+                "totalExpectedFull": trainingDaysPerWeek * weeks,
+                "expectedPast": expectedPast,
+                "trainedTotal": trainedTotal,
+                "trainedOnScheduled": trainedOnScheduled,
+                "missed": missedCount,
+                "restDays": restCount,
+                "consistency": consistency,
+                "bestStreak": best_streak,
+                "totalDays": weeks * 7,
+                "pastDays": pastDays,
+            },
+        }
+
+    # --- Real user: fetch schedule ---
+    schedule_map: dict[int, dict] = {i: {"routine_id": None, "routine_name": None, "day_of_week": i} for i in range(7)}
+    try:
+        s_data = (
+            supabase_admin.table("training_schedules")
+            .select("day_of_week, routine_id")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        rows = s_data.data or []
+        routine_ids = [r["routine_id"] for r in rows if r.get("routine_id")]
+        routine_names: dict[str, str] = {}
+        if routine_ids:
+            try:
+                r_data = (
+                    supabase_admin.table("routines")
+                    .select("id, name")
+                    .eq("user_id", user_id)
+                    .in_("id", routine_ids)
+                    .execute()
+                )
+                for r in (r_data.data or []):
+                    routine_names[str(r["id"])] = r.get("name") or "Routine"
+            except Exception:
+                pass
+        for r in rows:
+            dow = int(r["day_of_week"])
+            rid = r.get("routine_id")
+            schedule_map[dow] = {
+                "day_of_week": dow,
+                "routine_id": rid,
+                "routine_name": routine_names.get(str(rid)) if rid else None,
+            }
+    except Exception as e:
+        msg = str(e)
+        if "PGRST205" in msg or "schema cache" in msg:
+            # table missing -> treat as all rest
+            pass
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to fetch training schedule: {e}")
+
+    schedule_list = [schedule_map[i] for i in range(7)]
+    trainingDaysPerWeek = sum(1 for s in schedule_list if s["routine_id"] is not None)
+    restDaysPerWeek = 7 - trainingDaysPerWeek
+
+    # --- Fetch workouts in range ---
+    workout_dates_set: set[str] = set()
+    workouts_by_date: dict[str, list[dict]] = defaultdict(list)
+    try:
+        # Need pagination for workouts
+        page_size = 1000
+        offset = 0
+        while True:
+            q = (
+                supabase_admin.table("workouts")
+                .select("id, name, created_at, completed_sets, duration_minutes")
+                .eq("user_id", user_id)
+                .gte("created_at", from_dt.isoformat())
+                .lte("created_at", to_dt.isoformat())
+                .order("created_at", desc=False)
+                .range(offset, offset + page_size - 1)
+            )
+            data = q.execute()
+            batch = data.data or []
+            for w in batch:
+                ca = w.get("created_at")
+                try:
+                    dt = datetime.fromisoformat(str(ca).replace("Z", "+00:00"))
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    d_iso = dt.date().isoformat()
+                except Exception:
+                    continue
+                workout_dates_set.add(d_iso)
+                workouts_by_date[d_iso].append(w)
+            if len(batch) < page_size:
+                break
+            offset += page_size
+            if offset > 10000:
+                break
+    except Exception as e:
+        msg = str(e)
+        if "PGRST205" in msg or "schema cache" in msg:
+            # workouts table missing? treat as no workouts
+            workout_dates_set = set()
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to fetch workouts: {e}")
+
+    # --- Build matrix ---
+    matrix = []
+    expectedPast = 0
+    trainedOnScheduled = 0
+    trainedTotal = 0
+    restCount = 0
+    missedCount = 0
+    pastDays = 0
+
+    for w in range(weeks):
+        row = []
+        for d in range(7):
+            cur = start_monday + timedelta(days=w * 7 + d)
+            dow = cur.weekday()
+            sched = schedule_map.get(dow, {"routine_id": None, "routine_name": None, "day_of_week": dow})
+            scheduled = sched["routine_id"] is not None
+            is_future = cur > today
+            date_iso = cur.isoformat()
+            date_display = cur.strftime("%b %d")
+            day_label = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][dow]
+            has_workout = date_iso in workout_dates_set
+            if is_future:
+                state = "future"
+            elif has_workout:
+                state = "trained"
+            elif not scheduled:
+                state = "rest"
+            else:
+                state = "missed"
+
+            # label
+            routine_name = sched.get("routine_name")
+            if state == "trained":
+                # prefer workout name if available
+                wnames = workouts_by_date.get(date_iso, [])
+                if wnames:
+                    label = wnames[0].get("name") or routine_name or "Workout"
+                else:
+                    label = routine_name or "Workout"
+            elif state == "missed":
+                label = f"Missed: {routine_name}" if routine_name else "Missed Session"
+            elif state == "rest":
+                label = "Rest Day"
+            elif state == "future":
+                label = routine_name or "Upcoming"
+                if scheduled and routine_name:
+                    label = f"Upcoming: {routine_name}"
+                else:
+                    label = "Upcoming Rest"
+            else:
+                label = routine_name or "Rest Day"
+
+            if not is_future:
+                pastDays += 1
+                if scheduled:
+                    expectedPast += 1
+                    if has_workout:
+                        trainedOnScheduled += 1
+                    else:
+                        missedCount += 1
+                else:
+                    if not has_workout:
+                        restCount += 1
+                if has_workout:
+                    trainedTotal += 1
+
+            row.append({
+                "date": date_iso,
+                "date_display": date_display,
+                "day": day_label,
+                "day_of_week": dow,
+                "state": state,
+                "label": label,
+                "routine_name": routine_name,
+                "routine_id": sched.get("routine_id"),
+                "is_future": is_future,
+                "scheduled": scheduled,
+            })
+        matrix.append(row)
+
+    # best streak: consecutive trained days (calendar)
+    sorted_training = sorted([d for d in workout_dates_set if d <= today.isoformat()])
+    best_streak = 0
+    cur_streak = 0
+    prev_date = None
+    for ds in sorted_training:
+        try:
+            cur_d = datetime.fromisoformat(ds).date()
+        except Exception:
+            continue
+        if prev_date and (cur_d - prev_date).days == 1:
+            cur_streak += 1
+        else:
+            cur_streak = 1
+        best_streak = max(best_streak, cur_streak)
+        prev_date = cur_d
+    # if no training days, streak 0
+    if not sorted_training:
+        best_streak = 0
+
+    consistency = round(trainedOnScheduled / expectedPast * 100) if expectedPast else 0
+
+    return {
+        "weeks": weeks,
+        "from": start_monday.isoformat(),
+        "to": end_sunday.isoformat(),
+        "today": today.isoformat(),
+        "schedule": schedule_list,
+        "trainingDaysPerWeek": trainingDaysPerWeek,
+        "restDaysPerWeek": restDaysPerWeek,
+        "totalExpectedFull": trainingDaysPerWeek * weeks,
+        "matrix": matrix,
+        "stats": {
+            "trainingDaysPerWeek": trainingDaysPerWeek,
+            "restDaysPerWeek": restDaysPerWeek,
+            "totalExpectedFull": trainingDaysPerWeek * weeks,
+            "expectedPast": expectedPast,
+            "trainedTotal": trainedTotal,
+            "trainedOnScheduled": trainedOnScheduled,
+            "missed": missedCount,
+            "restDays": restCount,
+            "consistency": consistency,
+            "bestStreak": best_streak,
+            "totalDays": weeks * 7,
+            "pastDays": pastDays,
+        },
+    }
+
+
 @router.get("/muscle-focus")
 def get_muscle_focus(
     range: str = Query("THIS_WEEK", description="THIS_WEEK | LAST_WEEK | THIS_MONTH"),

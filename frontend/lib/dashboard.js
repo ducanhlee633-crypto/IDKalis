@@ -57,3 +57,14 @@ export async function apiGetPerformanceTrend(token, exerciseName, range = "30d")
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }
+
+// GET /api/dashboard/training-consistency?weeks=4
+export async function apiGetTrainingConsistency(token, weeks = 4) {
+  const url = new URL(`${API_BASE}/api/dashboard/training-consistency`);
+  url.searchParams.set("weeks", String(weeks));
+  const res = await safeFetch(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
