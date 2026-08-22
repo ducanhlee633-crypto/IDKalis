@@ -57,3 +57,42 @@ export async function apiGetGoal(token, id) {
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }
+
+// POST /api/goals/{id}/recalculate — thủ công tính lại progress (direct+indirect cap 100)
+export async function apiRecalculateGoal(token, id) {
+  const res = await safeFetch(`${API_BASE}/api/goals/${id}/recalculate`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+// POST /api/goals/recalculate-all — batch
+export async function apiRecalculateAllGoals(token) {
+  const res = await safeFetch(`${API_BASE}/api/goals/recalculate-all`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+// GET /api/goals/{id}/progress — lịch sử tăng progress
+export async function apiGetGoalProgress(token, id) {
+  const res = await safeFetch(`${API_BASE}/api/goals/${id}/progress`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+// DELETE /api/goals/{id}
+export async function apiDeleteGoal(token, id) {
+  const res = await safeFetch(`${API_BASE}/api/goals/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return true;
+}

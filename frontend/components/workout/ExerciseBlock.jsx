@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Info, Check, Plus } from "lucide-react";
+import { Info, Check, Plus, Timer, Clock } from "lucide-react";
 
 export default function ExerciseBlock({
   exercise,
@@ -42,6 +42,18 @@ export default function ExerciseBlock({
 
   const fieldKey = getFieldKey();
   const isHold = exercise.inputType === "time";
+  const rawRest = exercise.restSeconds ?? exercise.rest_seconds ?? exercise.restTime ?? null;
+  // fallback 90s cho routine cũ chưa có restSeconds (backward compat)
+  const effectiveRest = rawRest != null && String(rawRest).trim() !== "" && !Number.isNaN(Number(rawRest)) ? Number(rawRest) : 90;
+  const isDefaultRest = rawRest == null || String(rawRest).trim() === "" || Number.isNaN(Number(rawRest));
+  const restDisplay = (() => {
+    const n = effectiveRest;
+    if (Number.isNaN(n)) return null;
+    if (n < 60) return `${n}s`;
+    const m = Math.floor(n / 60);
+    const s = n % 60;
+    return s ? `${m}m ${s}s` : `${m}m`;
+  })();
 
   // Helpers: lấy placeholder previous cho từng set (chỉ hiển thị nếu có data)
   const getPrevPrimary = (prev) => {
@@ -79,22 +91,32 @@ export default function ExerciseBlock({
     <div className="bg-(--surface) border border-(--line) p-5 relative">
       {/* Exercise Header */}
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
           <div className="w-8 h-8 bg-(--accent-soft) border border-(--accent-line) flex items-center justify-center text-(--accent) font-display text-sm font-bold shrink-0">
             {exerciseIndex + 1}
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h3 className="text-sm font-bold text-zinc-100">
               {exercise.name}
             </h3>
             <p className="text-[11px] text-zinc-500 mt-0.5">
               Target: {exercise.target}
             </p>
+            {restDisplay && (
+              <span
+                className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 border text-[10px] font-medium ${isDefaultRest ? "bg-(--surface-3) border-(--line) text-(--faint)" : "bg-(--accent-soft) border-(--accent-line) text-(--accent)"}`}
+                title={isDefaultRest ? "Mặc định 90s (routine cũ chưa set)" : `Rest ${restDisplay} đã set`}
+              >
+                <Timer className="w-3 h-3 text-(--accent)" />
+                Rest {restDisplay}
+                {isDefaultRest && <span className="opacity-60">• default</span>}
+              </span>
+            )}
           </div>
         </div>
         <button
           onClick={() => onInfoClick(exercise)}
-          className="min-w-[44px] min-h-[44px] p-2 flex items-center justify-center text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition border border-(--line)"
+          className="min-w-[44px] min-h-[44px] p-2 flex items-center justify-center text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition border border-(--line) shrink-0"
         >
           <Info className="w-4 h-4" />
         </button>

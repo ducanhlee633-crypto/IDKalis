@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   MoreVertical,
   Save,
@@ -10,6 +10,8 @@ import {
   GripVertical,
   Timer as TimerIcon,
   Trash2,
+  Layers,
+  Link2,
 } from "lucide-react";
 import ExerciseBlock from "./ExerciseBlock";
 import RestTimerBar from "./RestTimerBar";
@@ -138,6 +140,47 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
 
   // Previous sets map: { [exerciseName]: [{setNumber, reps, holdSeconds, weight, weightRaw, rpe}] }
   const [previousMap, setPreviousMap] = useState({});
+
+  // Superset grouping - same logic as CreateRoutinePage
+  const supersetLabelMap = useMemo(() => {
+    const map = new Map();
+    let counter = 0;
+    const seen = new Set();
+    (program.exercises || []).forEach((ex) => {
+      if (ex.supersetId && !seen.has(ex.supersetId)) {
+        seen.add(ex.supersetId);
+        const label = String.fromCharCode(65 + counter);
+        map.set(ex.supersetId, label);
+        counter++;
+      }
+    });
+    return map;
+  }, [program.exercises]);
+
+  const groups = useMemo(() => {
+    const result = [];
+    const exs = program.exercises || [];
+    let i = 0;
+    while (i < exs.length) {
+      const cur = exs[i];
+      const nxt = exs[i + 1];
+      if (cur.supersetId && nxt && cur.supersetId === nxt.supersetId) {
+        result.push({
+          type: "superset",
+          supersetId: cur.supersetId,
+          exercises: [cur, nxt],
+          startIndex: i,
+        });
+        i += 2;
+      } else {
+        result.push({ type: "single", exercises: [cur], startIndex: i });
+        i += 1;
+      }
+    }
+    return result;
+  }, [program.exercises]);
+
+  const hasSuperset = supersetLabelMap.size > 0;
 
   // Fetch previous sets (exercise_progress) for placeholder — per user, latest workout per exercise
   useEffect(() => {
@@ -311,7 +354,21 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
     });
   };
 
-  // Toggle set done — triggers rest timer
+  // Helper: lấy restSeconds per-exercise (fetch từ DB snapshot), fallback về global default
+  const getRestForExercise = useCallback(
+    (ex) => {
+      if (!ex) return restDefaultRef.current;
+      const raw = ex.restSeconds ?? ex.rest_seconds ?? ex.restTime ?? ex.rest_time ?? null;
+      if (raw == null || raw === "") return restDefaultRef.current;
+      const n = Number(raw);
+      if (Number.isNaN(n)) return restDefaultRef.current;
+      return Math.max(REST_MIN_SECONDS, Math.min(REST_MAX_SECONDS, n));
+    },
+    []
+  );
+
+  // Toggle set done — triggers rest timer (superset-aware: nghỉ chỉ sau khi xong cả 2 bài trong superset)
+  // Dùng restSeconds đã set trong routine (per-exercise)
   const handleToggleDone = (exerciseId, setIdx) => {
     const currentDone = sets[exerciseId]?.[setIdx]?.done;
     const nextDone = !currentDone;
@@ -327,11 +384,22 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
     });
 
     // Rest timer logic: auto start when DONE true, cancel when undone
+    // Superset: nếu là bài đầu của superset (có supersetId trùng bài kế tiếp) thì KHÔNG nghỉ — tập luôn bài kia
     if (nextDone) {
-      // if already active, restart with (possibly updated) default — gives fresh countdown per set
-      startRest(restDefaultRef.current);
+      const exIdx = program.exercises.findIndex((e) => e.id === exerciseId);
+      const ex = program.exercises[exIdx];
+      const nextEx = program.exercises[exIdx + 1];
+      const isFirstInSuperset = ex?.supersetId && nextEx && ex.supersetId === nextEx.supersetId;
+      if (isFirstInSuperset) {
+        // Không bật rest, để user tập ngay bài thứ 2 trong superset
+        stopRest();
+      } else {
+        // bài thứ 2 trong superset hoặc bài lẻ: dùng rest đã set cho bài đó
+        const secs = getRestForExercise(ex);
+        startRest(secs);
+      }
     } else {
-      // uncheck -> dismiss current rest (if user unticks, they probably don't need rest)
+      // uncheck -> dismiss current rest
       stopRest();
     }
   };
@@ -398,8 +466,18 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
     setSaveError(null);
     try {
       // Build exercises payload cho exercise_progress (1 row = 1 set done=true)
+      // kèm goalLink để backend tính progress (direct/indirect) + routineId để trace
       const exercisesPayload = (program.exercises || []).map((ex) => {
         const exSets = sets[ex.id] || [];
+        const rawGoalLink = ex.goalLink || ex.goal_link;
+        let goalLink = null;
+        if (rawGoalLink && typeof rawGoalLink === "object" && rawGoalLink.goalId) {
+          goalLink = {
+            goalId: rawGoalLink.goalId,
+            type: (rawGoalLink.type || "direct").toLowerCase(),
+            ...(rawGoalLink.type === "indirect" ? { indirectGain: rawGoalLink.indirectGain ?? rawGoalLink.indirect_gain ?? 3 } : {}),
+          };
+        }
         return {
           exerciseId: ex.id,
           exerciseName: ex.name,
@@ -407,6 +485,8 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
           muscleGroups: ex.muscleGroups || ex.muscle_groups || [],
           primaryMuscles: ex.primaryMuscles || ex.primary_muscles || [],
           secondaryMuscles: ex.secondaryMuscles || ex.secondary_muscles || [],
+          goalLink,
+          goal_link: goalLink,
           sets: exSets.map((s) => ({
             reps: s.reps,
             time: s.time,
@@ -418,12 +498,16 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
         };
       });
 
+      // routineId nếu là custom routine (uuid), mock prog-* thì bỏ qua
+      const routineId = program.id && !String(program.id).startsWith("prog-") ? program.id : null;
+
       const res = await apiCreateWorkout(token, {
         name: program.name,
         completedSets,
         avgRpe,
         durationMinutes,
         exercises: exercisesPayload,
+        ...(routineId ? { routineId, routine_id: routineId } : {}),
       });
       // Backend trả về camelCase (sessionNumber) hoặc snake_case (session_number)
       const serverSession = res.sessionNumber ?? res.session_number ?? getNextSessionNumber();
@@ -478,6 +562,11 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
                 ACTIVE WORKOUT
               </span>
               <span className="led led-live" />
+              {hasSuperset && (
+                <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 bg-(--accent-soft) border border-(--accent-line) text-(--accent) text-[9px] font-bold tracking-wider">
+                  <Layers className="w-2.5 h-2.5" /> {supersetLabelMap.size} SUPERSET
+                </span>
+              )}
             </div>
             <h1 className="text-xl font-bold text-zinc-100 tracking-tight">
               {program.name}
@@ -549,21 +638,74 @@ export default function ActiveWorkoutPage({ program, onFinish }) {
         </div>
       </div>
 
-      {/* Exercise Blocks */}
+      {/* Exercise Blocks - grouped by superset */}
       <div className="space-y-5">
-        {program.exercises.map((exercise, idx) => (
-          <ExerciseBlock
-            key={exercise.id}
-            exercise={exercise}
-            exerciseIndex={idx}
-            sets={sets[exercise.id] || []}
-            previousSets={previousMap[exercise.name] || []}
-            onSetChange={handleSetChange}
-            onAddSet={handleAddSet}
-            onToggleDone={handleToggleDone}
-            onInfoClick={(ex) => setInfoExercise(ex)}
-          />
-        ))}
+        {groups.map((group) => {
+          if (group.type === "superset") {
+            const label = supersetLabelMap.get(group.supersetId);
+            return (
+              <div
+                key={group.supersetId}
+                className="border border-(--accent-line) bg-(--surface) p-3 sm:p-4 space-y-4 relative"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-(--accent) text-white text-[10px] font-bold tracking-[0.14em] uppercase shadow">
+                    <Layers className="w-3 h-3" />
+                    SUPERSET {label}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] text-(--accent) font-medium">
+                    <Link2 className="w-3 h-3" /> {group.exercises[0].name} + {group.exercises[1].name}
+                  </span>
+                  <span className="text-[10px] text-(--muted) hidden sm:inline">• Tập liên tiếp, nghỉ sau khi xong cả 2 bài</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {group.exercises.map((exercise, innerIdx) => {
+                    const globalIdx = group.startIndex + innerIdx;
+                    return (
+                      <div key={exercise.id} className="relative">
+                        {innerIdx === 1 && (
+                          <div className="flex items-center justify-center gap-2 py-1">
+                            <div className="h-px flex-1 bg-(--accent-line)/40 hidden sm:block" />
+                            <span className="text-[9px] font-bold tracking-wider text-(--accent) bg-(--accent-soft) border border-(--accent-line) px-2 py-0.5 flex items-center gap-1">
+                              <Link2 className="w-2.5 h-2.5" /> SUPERSET
+                            </span>
+                            <div className="h-px flex-1 bg-(--accent-line)/40 hidden sm:block" />
+                          </div>
+                        )}
+                        <ExerciseBlock
+                          exercise={exercise}
+                          exerciseIndex={globalIdx}
+                          sets={sets[exercise.id] || []}
+                          previousSets={previousMap[exercise.name] || []}
+                          onSetChange={handleSetChange}
+                          onAddSet={handleAddSet}
+                          onToggleDone={handleToggleDone}
+                          onInfoClick={(ex) => setInfoExercise(ex)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }
+          // single
+          const exercise = group.exercises[0];
+          return (
+            <ExerciseBlock
+              key={exercise.id}
+              exercise={exercise}
+              exerciseIndex={group.startIndex}
+              sets={sets[exercise.id] || []}
+              previousSets={previousMap[exercise.name] || []}
+              onSetChange={handleSetChange}
+              onAddSet={handleAddSet}
+              onToggleDone={handleToggleDone}
+              onInfoClick={(ex) => setInfoExercise(ex)}
+            />
+          );
+        })}
       </div>
 
       {/* Finish Workout Button */}

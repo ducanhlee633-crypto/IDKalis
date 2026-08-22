@@ -68,3 +68,14 @@ export async function apiGetTrainingConsistency(token, weeks = 4) {
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }
+
+// GET /api/dashboard/volume?range=THIS_WEEK
+export async function apiGetVolume(token, range = "THIS_WEEK") {
+  const url = new URL(`${API_BASE}/api/dashboard/volume`);
+  url.searchParams.set("range", range);
+  const res = await safeFetch(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}

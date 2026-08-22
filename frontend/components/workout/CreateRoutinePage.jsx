@@ -12,11 +12,25 @@ import {
   ChevronDown,
   StickyNote,
   Check,
+  Link2,
+  Unlink2,
+  Layers,
+  Timer,
+  Clock,
+  Target,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 import { apiListExercises } from "@/lib/exercises";
+import { getStoredSession } from "@/lib/auth";
+import { apiListGoals } from "@/lib/goals";
 
 const CATEGORIES = ["PUSH", "PULL", "CORE", "LEGS", "SKILLS"];
 const TIME_EST_OPTIONS = [15, 30, 45, 60, 75, 90, 120];
+const REST_DEFAULT_SECONDS = 90;
+const REST_PRESETS = [30, 60, 90, 120, 180];
+const REST_MIN = 0;
+const REST_MAX = 600;
 
 const inputTypeLabel = {
   time: "Time Hold",
@@ -53,7 +67,22 @@ function createExercise(libEx) {
     target: "",
     note: "",
     defaultSets: defaultSetsFor(libEx.inputType),
+    supersetId: null,
+    restSeconds: REST_DEFAULT_SECONDS,
+    goalLink: null, // {goalId, type: 'direct'|'indirect', indirectGain: 3-5}
   };
+}
+
+function formatRest(seconds) {
+  const s = Number(seconds) || 0;
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return rem ? `${m}m ${rem}s` : `${m}m`;
+}
+
+function generateSupersetId() {
+  return `ss-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
 export default function CreateRoutinePage({ onSave, onCancel }) {
@@ -71,6 +100,10 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
   const [libraryExercises, setLibraryExercises] = useState([]);
   const [libraryLoading, setLibraryLoading] = useState(true);
   const [libraryError, setLibraryError] = useState(null);
+
+  // Goals để link per-exercise (goalLink)
+  const [goalsList, setGoalsList] = useState([]);
+  const [goalsLoading, setGoalsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,10 +124,51 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setGoalsLoading(true);
+        const session = getStoredSession();
+        const token = session?.token;
+        if (!token) {
+          if (!cancelled) setGoalsList([]);
+          return;
+        }
+        const data = await apiListGoals(token);
+        if (!cancelled) setGoalsList(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setGoalsList([]);
+      } finally {
+        if (!cancelled) setGoalsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const totalSets = useMemo(
     () => exercises.reduce((sum, ex) => sum + ex.defaultSets.length, 0),
     [exercises]
   );
+
+  const supersetLabelMap = useMemo(() => {
+    const map = new Map();
+    let counter = 0;
+    const seen = new Set();
+    exercises.forEach((ex) => {
+      if (ex.supersetId && !seen.has(ex.supersetId)) {
+        seen.add(ex.supersetId);
+        const label = String.fromCharCode(65 + counter);
+        map.set(ex.supersetId, label);
+        counter++;
+      }
+    });
+    return map;
+  }, [exercises]);
+
+  const supersetCount = supersetLabelMap.size;
 
   const addExercise = (libEx) => {
     if (exercises.some((ex) => ex.name === libEx.name)) return;
@@ -102,17 +176,69 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
   };
 
   const removeExercise = (id) => {
-    setExercises((prev) => prev.filter((ex) => ex.id !== id));
+    setExercises((prev) => {
+      const target = prev.find((ex) => ex.id === id);
+      const sid = target?.supersetId;
+      let filtered = prev.filter((ex) => ex.id !== id);
+      if (sid) {
+        filtered = filtered.map((ex) => (ex.supersetId === sid ? { ...ex, supersetId: null } : ex));
+      }
+      return filtered;
+    });
   };
 
   const moveExercise = (id, dir) => {
     setExercises((prev) => {
       const idx = prev.findIndex((ex) => ex.id === id);
+      if (idx < 0) return prev;
+      const newIdx = idx + dir;
+      if (newIdx < 0 || newIdx >= prev.length) return prev;
       const next = [...prev];
       const [item] = next.splice(idx, 1);
-      next.splice(idx + dir, 0, item);
+      next.splice(newIdx, 0, item);
+      // validate supersets: only consecutive pair with same id is valid
+      const groups = new Map();
+      next.forEach((ex, i) => {
+        if (!ex.supersetId) return;
+        if (!groups.has(ex.supersetId)) groups.set(ex.supersetId, []);
+        groups.get(ex.supersetId).push(i);
+      });
+      const invalid = new Set();
+      groups.forEach((indices, sid) => {
+        if (indices.length !== 2) invalid.add(sid);
+        else if (Math.abs(indices[0] - indices[1]) !== 1) invalid.add(sid);
+      });
+      if (invalid.size > 0) {
+        return next.map((ex) => (invalid.has(ex.supersetId) ? { ...ex, supersetId: null } : ex));
+      }
       return next;
     });
+  };
+
+  const toggleSuperset = (idx) => {
+    if (idx < 0 || idx >= exercises.length - 1) return;
+    const a = exercises[idx];
+    const b = exercises[idx + 1];
+    const isPaired = a.supersetId && a.supersetId === b.supersetId;
+    if (isPaired) {
+      const sid = a.supersetId;
+      setExercises((prev) => prev.map((ex) => (ex.supersetId === sid ? { ...ex, supersetId: null } : ex)));
+    } else {
+      // clear existing superset containing a or b
+      const sidsToClear = new Set();
+      if (a.supersetId) sidsToClear.add(a.supersetId);
+      if (b.supersetId) sidsToClear.add(b.supersetId);
+      let next = exercises;
+      if (sidsToClear.size > 0) {
+        next = next.map((ex) => (sidsToClear.has(ex.supersetId) ? { ...ex, supersetId: null } : ex));
+      } else {
+        next = [...next];
+      }
+      const newId = generateSupersetId();
+      next[idx] = { ...next[idx], supersetId: newId };
+      next[idx + 1] = { ...next[idx + 1], supersetId: newId };
+      setExercises(next);
+    }
   };
 
   const updateExercise = (id, field, value) => {
@@ -156,6 +282,37 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
     );
   };
 
+  const updateRestSeconds = (exId, seconds) => {
+    const clamped = Math.max(REST_MIN, Math.min(REST_MAX, Number(seconds) || 0));
+    setExercises((prev) => prev.map((ex) => (ex.id === exId ? { ...ex, restSeconds: clamped } : ex)));
+  };
+
+  const updateGoalLink = (exId, patch) => {
+    setExercises((prev) =>
+      prev.map((ex) => {
+        if (ex.id !== exId) return ex;
+        const cur = ex.goalLink || null;
+        if (patch === null) return { ...ex, goalLink: null };
+        // patch có thể là {goalId, type, indirectGain}
+        const next = { ...(cur || {}), ...patch };
+        // nếu chọn goal mới mà chưa có type thì mặc định direct
+        if (!next.type) next.type = "direct";
+        if (next.type === "direct") delete next.indirectGain;
+        else {
+          const g = Number(next.indirectGain ?? 3);
+          next.indirectGain = Math.max(3, Math.min(5, g || 3));
+        }
+        // nếu goalId rỗng => clear
+        if (!next.goalId) return { ...ex, goalLink: null };
+        return { ...ex, goalLink: next };
+      })
+    );
+  };
+
+  const clearGoalLink = (exId) => {
+    setExercises((prev) => prev.map((ex) => (ex.id === exId ? { ...ex, goalLink: null } : ex)));
+  };
+
   const defaultTargetFor = (ex) => {
     const first = ex.defaultSets[0];
     if (!first) return "";
@@ -169,27 +326,43 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
   };
 
   const handleSave = () => {
-    // exercises snapshot gồm reps/sets (defaultSets) để lưu jsonb — hold (time) bỏ reps
+    // exercises snapshot gồm reps/sets (defaultSets) + restSeconds + goalLink để lưu jsonb — hold (time) bỏ reps
     const routine = {
       name: name.trim() || "Untitled Routine",
       category,
       timeEst: Number(timeEst),
       note: note.trim(),
-      exercises: exercises.map((ex) => ({
-        id: ex.id,
-        name: ex.name,
-        target: ex.target.trim() || defaultTargetFor(ex),
-        inputType: ex.inputType,
-        description: ex.description,
-        muscleGroups: ex.muscleGroups,
-        tips: ex.tips,
-        note: ex.note,
-        defaultSets: ex.defaultSets.map((s) => {
-          const clean = { ...s };
-          if (ex.inputType === "time") delete clean.reps;
-          return clean;
-        }),
-      })),
+      exercises: exercises.map((ex) => {
+        const base = {
+          id: ex.id,
+          name: ex.name,
+          target: (ex.target || "").trim() || defaultTargetFor(ex),
+          inputType: ex.inputType,
+          description: ex.description,
+          muscleGroups: ex.muscleGroups,
+          tips: ex.tips,
+          note: ex.note,
+          defaultSets: ex.defaultSets.map((s) => {
+            const clean = { ...s };
+            if (ex.inputType === "time") delete clean.reps;
+            return clean;
+          }),
+          supersetId: ex.supersetId || null,
+          restSeconds: Math.max(REST_MIN, Math.min(REST_MAX, Number(ex.restSeconds ?? REST_DEFAULT_SECONDS))),
+          // keep snake_case alias for backward compat fetch
+          rest_seconds: Math.max(REST_MIN, Math.min(REST_MAX, Number(ex.restSeconds ?? REST_DEFAULT_SECONDS))),
+        };
+        if (ex.goalLink && ex.goalLink.goalId) {
+          base.goalLink = {
+            goalId: ex.goalLink.goalId,
+            type: ex.goalLink.type || "direct",
+            ...(ex.goalLink.type === "indirect" ? { indirectGain: ex.goalLink.indirectGain ?? 3 } : {}),
+          };
+          // alias snake_case
+          base.goal_link = base.goalLink;
+        }
+        return base;
+      }),
     };
     onSave(routine);
   };
@@ -233,6 +406,15 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
             <span>{exercises.length} EX</span>
             <span className="text-(--faint)">|</span>
             <span>{totalSets} SETS</span>
+            {supersetCount > 0 && (
+              <>
+                <span className="text-(--faint)">|</span>
+                <span className="flex items-center gap-1">
+                  <Layers className="w-3 h-3" />
+                  {supersetCount} SS
+                </span>
+              </>
+            )}
           </div>
 
           <button
@@ -309,7 +491,7 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
       </div>
 
       {/* Exercise List */}
-      <div className="space-y-4">
+      <div className="space-y-0">
         {exercises.length === 0 && (
           <div className="bg-(--surface) border border-dashed border-(--line-strong) p-10 text-center">
             <p className="text-sm text-(--muted) mb-1">No exercises yet.</p>
@@ -329,133 +511,350 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         {exercises.map((ex, idx) => {
           const fieldKey = fieldKeyFor(ex.inputType);
           const isHold = ex.inputType === "time";
+          const inSuperset = !!ex.supersetId;
+          const supersetLabel = inSuperset ? supersetLabelMap.get(ex.supersetId) : null;
+          const isPairedWithNext = inSuperset && ex.supersetId === exercises[idx + 1]?.supersetId;
+          const isPairedWithPrev = inSuperset && ex.supersetId === exercises[idx - 1]?.supersetId;
+          const showTopConnector = isPairedWithPrev;
+          const showBottomConnector = idx < exercises.length - 1;
+          const bottomIsPaired = isPairedWithNext;
+
           return (
-            <div key={ex.id} className="bg-(--surface) border border-(--line) p-5">
-              {/* Exercise Header */}
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <div className="w-8 h-8 bg-(--accent-soft) border border-(--accent-line) flex items-center justify-center text-(--accent) font-display text-sm font-bold shrink-0">
-                    {idx + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-sm font-bold text-zinc-100">{ex.name}</h3>
-                      <span className="px-1.5 py-0.5 bg-(--surface-3) border border-(--line) text-(--faint) text-[9px] font-medium uppercase">
-                        {inputTypeLabel[ex.inputType]}
-                      </span>
-                    </div>
-                    <input
-                      value={ex.target}
-                      onChange={(e) => updateExercise(ex.id, "target", e.target.value)}
-                      placeholder={`Target (e.g. ${defaultTargetFor(ex)})`}
-                      className="mt-1 w-full sm:w-56 bg-(--surface-3) border border-(--line-strong) px-2.5 py-1.5 text-[11px] text-zinc-300 outline-none placeholder:text-(--faint) focus:border-(--accent-line) transition"
-                    />
-                  </div>
+            <React.Fragment key={ex.id}>
+              {/* Superset top connector bar (when this exercise is second in pair) */}
+              {showTopConnector && (
+                <div className="flex justify-center -my-1 relative z-10">
+                  <div className="w-px h-3 bg-(--accent) opacity-60" />
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => moveExercise(ex.id, -1)}
-                    disabled={idx === 0}
-                    className="p-1.5 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => moveExercise(ex.id, 1)}
-                    disabled={idx === exercises.length - 1}
-                    className="p-1.5 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => removeExercise(ex.id)}
-                    className="p-1.5 text-(--faint) hover:text-(--accent) hover:bg-(--accent-soft) transition"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              )}
 
-              {/* Sets Table — hold (time) không có REPS */}
               <div
-                className={`grid gap-1.5 sm:gap-2 px-2 pb-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider ${
-                  isHold
-                    ? "grid-cols-[40px_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_40px]"
-                    : "grid-cols-[40px_1fr_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_1fr_40px]"
-                }`}
+                className={`bg-(--surface) border p-5 relative transition ${
+                  inSuperset
+                    ? "border-(--accent-line) shadow-[0_0_0_1px_rgba(255,77,77,0.15)]"
+                    : "border-(--line)"
+                } ${isPairedWithPrev ? "rounded-t-none border-t-0" : ""} ${isPairedWithNext ? "rounded-b-none border-b-0" : ""}`}
               >
-                <span>SET</span>
-                <span>{fieldKey === "time" ? "TIME (S)" : fieldKey === "weight" ? "WEIGHT (KG)" : "NOTE"}</span>
-                {!isHold && <span>REPS</span>}
-                <span>RPE</span>
-                <span />
-              </div>
+                {/* Superset Badge - top left corner */}
+                {inSuperset && (
+                  <div className="absolute -top-2 left-4 flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-(--accent) text-white text-[9px] font-bold tracking-[0.14em] uppercase shadow">
+                      <Layers className="w-2.5 h-2.5" />
+                      SUPERSET {supersetLabel}
+                    </span>
+                    {isPairedWithNext && (
+                      <span className="text-[9px] text-(--accent) font-medium hidden sm:inline">↕ nối với bài tiếp theo</span>
+                    )}
+                    {isPairedWithPrev && (
+                      <span className="text-[9px] text-(--accent) font-medium hidden sm:inline">↕ nối với bài trước</span>
+                    )}
+                  </div>
+                )}
 
-              {ex.defaultSets.map((set, setIdx) => (
+                {/* Exercise Header */}
+                <div className={`flex items-start justify-between gap-3 mb-4 ${inSuperset ? "mt-2" : ""}`}>
+                  <div className="flex items-start gap-3 flex-1">
+                    <div
+                      className={`w-8 h-8 flex items-center justify-center font-display text-sm font-bold shrink-0 border transition ${
+                        inSuperset
+                          ? "bg-(--accent) border-(--accent) text-white"
+                          : "bg-(--accent-soft) border-(--accent-line) text-(--accent)"
+                      }`}
+                    >
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm font-bold text-zinc-100">{ex.name}</h3>
+                        <span className="px-1.5 py-0.5 bg-(--surface-3) border border-(--line) text-(--faint) text-[9px] font-medium uppercase">
+                          {inputTypeLabel[ex.inputType]}
+                        </span>
+                        <span className="text-[10px] text-(--faint) hidden sm:inline">
+                          • {defaultTargetFor(ex)}
+                        </span>
+                      </div>
+                      {/* Rest Timer Setter — thay thế Target input */}
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wide uppercase text-(--muted)">
+                          <Timer className="w-3 h-3 text-(--accent)" />
+                          Rest:
+                        </span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {REST_PRESETS.map((preset) => {
+                            const isActive = (ex.restSeconds ?? REST_DEFAULT_SECONDS) === preset;
+                            return (
+                              <button
+                                key={preset}
+                                onClick={() => updateRestSeconds(ex.id, preset)}
+                                className={`px-2 py-1 text-[11px] font-medium border transition ${
+                                  isActive
+                                    ? "bg-(--accent) border-(--accent) text-white"
+                                    : "bg-(--surface-3) border-(--line-strong) text-zinc-400 hover:text-zinc-200 hover:border-(--accent-line)"
+                                }`}
+                              >
+                                {formatRest(preset)}
+                              </button>
+                            );
+                          })}
+                          <div className="flex items-center gap-1 ml-1 bg-(--surface-3) border border-(--line-strong) px-2 py-1 focus-within:border-(--accent-line) transition">
+                            <input
+                              type="number"
+                              min={REST_MIN}
+                              max={REST_MAX}
+                              step={5}
+                              value={ex.restSeconds ?? REST_DEFAULT_SECONDS}
+                              onChange={(e) => updateRestSeconds(ex.id, e.target.value)}
+                              className="w-14 bg-transparent outline-none text-xs text-zinc-200 text-center placeholder:text-(--faint)"
+                              placeholder="90"
+                            />
+                            <span className="text-[11px] text-(--faint)">giây</span>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Goal Link — bổ trợ cho mục tiêu */}
+                      <div className="mt-2.5 flex flex-col gap-1.5 bg-(--surface-3) border border-(--line) p-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <Target className="w-3 h-3 text-(--accent)" />
+                          <span className="text-[10px] font-bold tracking-wide uppercase text-(--muted)">Bổ trợ Goal</span>
+                          {ex.goalLink?.goalId && (
+                            <span className="ml-auto inline-flex items-center gap-1 text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 bg-(--accent-soft) border border-(--accent-line) text-(--accent)">
+                              {ex.goalLink.type === "direct" ? (
+                                <>
+                                  <Sparkles className="w-2.5 h-2.5" /> Trực tiếp
+                                </>
+                              ) : (
+                                <>
+                                  <TrendingUp className="w-2.5 h-2.5" /> Gián tiếp +{ex.goalLink.indirectGain ?? 3}%
+                                </>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <select
+                            value={ex.goalLink?.goalId || ""}
+                            onChange={(e) => {
+                              const gid = e.target.value;
+                              if (!gid) clearGoalLink(ex.id);
+                              else updateGoalLink(ex.id, { goalId: gid });
+                            }}
+                            className="flex-1 min-w-[180px] bg-(--surface) border border-(--line-strong) px-2 py-1.5 text-[11px] text-zinc-200 outline-none focus:border-(--accent-line) transition"
+                          >
+                            <option value="">— Không liên kết —</option>
+                            {goalsLoading ? (
+                              <option disabled>Đang tải goals...</option>
+                            ) : goalsList.length === 0 ? (
+                              <option disabled>Chưa có goal nào</option>
+                            ) : (
+                              goalsList.map((g) => (
+                                <option key={g.id} value={g.id}>
+                                  {g.title} • {g.target || `${g.metricValue}${g.metricType === "seconds" ? "s" : g.metricType === "weighted" ? "kg" : " reps"}`} ({g.progress ?? 0}%)
+                                </option>
+                              ))
+                            )}
+                          </select>
+                          {ex.goalLink?.goalId && (
+                            <>
+                              <div className="flex items-center gap-1 bg-(--surface) border border-(--line) p-0.5">
+                                <button
+                                  onClick={() => updateGoalLink(ex.id, { type: "direct" })}
+                                  className={`px-2 py-1 text-[10px] font-semibold border transition ${ex.goalLink.type === "direct" ? "bg-(--accent) border-(--accent) text-white" : "border-transparent text-(--muted) hover:text-zinc-200"}`}
+                                >
+                                  Trực tiếp
+                                </button>
+                                <button
+                                  onClick={() => updateGoalLink(ex.id, { type: "indirect" })}
+                                  className={`px-2 py-1 text-[10px] font-semibold border transition ${ex.goalLink.type === "indirect" ? "bg-(--accent) border-(--accent) text-white" : "border-transparent text-(--muted) hover:text-zinc-200"}`}
+                                >
+                                  Gián tiếp
+                                </button>
+                              </div>
+                              {ex.goalLink.type === "indirect" && (
+                                <div className="flex items-center gap-1 bg-(--surface) border border-(--line-strong) px-2 py-1">
+                                  <span className="text-[10px] text-(--faint)">+Gain:</span>
+                                  {[3, 4, 5].map((g) => (
+                                    <button
+                                      key={g}
+                                      onClick={() => updateGoalLink(ex.id, { indirectGain: g })}
+                                      className={`px-1.5 py-0.5 text-[11px] font-medium border transition ${ (ex.goalLink.indirectGain ?? 3) === g ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}
+                                    >
+                                      {g}%
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              <button
+                                onClick={() => clearGoalLink(ex.id)}
+                                className="p-1 text-(--faint) hover:text-(--accent) hover:bg-(--accent-soft) transition"
+                                title="Xoá liên kết"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        {ex.goalLink?.goalId && (
+                          <p className="text-[10px] leading-relaxed text-(--faint)">
+                            {ex.goalLink.type === "direct" ? (
+                              <>
+                                <span className="text-(--accent) font-semibold">Trực tiếp:</span> progress = hold/reps/weight tốt nhất / target ×100. VD Adv Tuck Planche 5s hold 3s → 60%.
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-(--accent) font-semibold">Gián tiếp:</span> mỗi buổi có bài này done +{ex.goalLink.indirectGain ?? 3}% (cộng dồn per bài, cap 100). VD Planche Lean.
+                              </>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => moveExercise(ex.id, -1)}
+                      disabled={idx === 0}
+                      className="p-1.5 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => moveExercise(ex.id, 1)}
+                      disabled={idx === exercises.length - 1}
+                      className="p-1.5 text-(--faint) hover:text-zinc-300 hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => removeExercise(ex.id)}
+                      className="p-1.5 text-(--faint) hover:text-(--accent) hover:bg-(--accent-soft) transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sets Table — hold (time) không có REPS */}
                 <div
-                  key={setIdx}
-                  className={`grid gap-1.5 sm:gap-2 items-center px-2 py-1.5 ${
+                  className={`grid gap-1.5 sm:gap-2 px-2 pb-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider ${
                     isHold
                       ? "grid-cols-[40px_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_40px]"
                       : "grid-cols-[40px_1fr_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_1fr_40px]"
                   }`}
                 >
-                  <span className="text-xs font-bold text-zinc-400 text-center">
-                    {setIdx + 1}
-                  </span>
-                  <input
-                    type="text"
-                    value={set[fieldKey] || ""}
-                    onChange={(e) => updateSet(ex.id, setIdx, fieldKey, e.target.value)}
-                    placeholder="-"
-                    className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
-                  />
-                  {!isHold && (
+                  <span>SET</span>
+                  <span>{fieldKey === "time" ? "TIME (S)" : fieldKey === "weight" ? "WEIGHT (KG)" : "NOTE"}</span>
+                  {!isHold && <span>REPS</span>}
+                  <span>RPE</span>
+                  <span />
+                </div>
+
+                {ex.defaultSets.map((set, setIdx) => (
+                  <div
+                    key={setIdx}
+                    className={`grid gap-1.5 sm:gap-2 items-center px-2 py-1.5 ${
+                      isHold
+                        ? "grid-cols-[40px_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_40px]"
+                        : "grid-cols-[40px_1fr_1fr_1fr_36px] sm:grid-cols-[50px_1fr_1fr_1fr_40px]"
+                    }`}
+                  >
+                    <span className="text-xs font-bold text-zinc-400 text-center">
+                      {setIdx + 1}
+                    </span>
                     <input
                       type="text"
-                      value={set.reps || ""}
-                      onChange={(e) => updateSet(ex.id, setIdx, "reps", e.target.value)}
+                      value={set[fieldKey] || ""}
+                      onChange={(e) => updateSet(ex.id, setIdx, fieldKey, e.target.value)}
                       placeholder="-"
                       className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
                     />
-                  )}
-                  <input
-                    type="text"
-                    value={set.rpe || ""}
-                    onChange={(e) => updateSet(ex.id, setIdx, "rpe", e.target.value)}
-                    placeholder="-"
-                    className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
-                  />
-                  <button
-                    onClick={() => removeSet(ex.id, setIdx)}
-                    disabled={ex.defaultSets.length <= 1}
-                    className="flex items-center justify-center p-1.5 text-zinc-600 hover:text-red-400 transition disabled:opacity-25 disabled:cursor-not-allowed"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+                    {!isHold && (
+                      <input
+                        type="text"
+                        value={set.reps || ""}
+                        onChange={(e) => updateSet(ex.id, setIdx, "reps", e.target.value)}
+                        placeholder="-"
+                        className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
+                      />
+                    )}
+                    <input
+                      type="text"
+                      value={set.rpe || ""}
+                      onChange={(e) => updateSet(ex.id, setIdx, "rpe", e.target.value)}
+                      placeholder="-"
+                      className="bg-(--surface-3) border border-(--line-strong) text-zinc-200 text-xs px-2 sm:px-3 py-2 w-full outline-none focus:border-(--accent-line) transition placeholder:text-(--faint)"
+                    />
+                    <button
+                      onClick={() => removeSet(ex.id, setIdx)}
+                      disabled={ex.defaultSets.length <= 1}
+                      className="flex items-center justify-center p-1.5 text-zinc-600 hover:text-red-400 transition disabled:opacity-25 disabled:cursor-not-allowed"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
 
-              {/* Add Set + Exercise Note */}
-              <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
-                <button
-                  onClick={() => addSet(ex.id)}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 border border-dashed border-(--line-strong) text-(--faint) hover:text-zinc-300 hover:border-(--line-strong) text-[11px] transition shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Set</span>
-                </button>
-                <div className="flex items-center gap-2 flex-1">
-                  <StickyNote className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
-                  <input
-                    value={ex.note}
-                    onChange={(e) => updateExercise(ex.id, "note", e.target.value)}
-                    placeholder="Note for this exercise (form cues, tempo, alternative...)"
-                    className="w-full bg-(--surface-3) border border-(--line-strong) px-3 py-2 text-[11px] text-zinc-300 outline-none placeholder:text-(--faint) focus:border-(--accent-line) transition"
-                  />
+                {/* Add Set + Exercise Note */}
+                <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <button
+                    onClick={() => addSet(ex.id)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-dashed border-(--line-strong) text-(--faint) hover:text-zinc-300 hover:border-(--line-strong) text-[11px] transition shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Set</span>
+                  </button>
+                  <div className="flex items-center gap-2 flex-1">
+                    <StickyNote className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+                    <input
+                      value={ex.note}
+                      onChange={(e) => updateExercise(ex.id, "note", e.target.value)}
+                      placeholder="Note for this exercise (form cues, tempo, alternative...)"
+                      className="w-full bg-(--surface-3) border border-(--line-strong) px-3 py-2 text-[11px] text-zinc-300 outline-none placeholder:text-(--faint) focus:border-(--accent-line) transition"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+
+              {/* Superset Toggle Connector between this and next exercise */}
+              {showBottomConnector && (
+                <div
+                  className={`flex items-center justify-center gap-2 py-2 px-3 -mx-0.5 ${
+                    bottomIsPaired
+                      ? "bg-(--accent-soft) border-x border-(--accent-line) border-dashed"
+                      : "bg-transparent"
+                  }`}
+                >
+                  <div className={`hidden sm:block h-px flex-1 ${bottomIsPaired ? "bg-(--accent-line)" : "bg-(--line) border-t border-dashed border-(--line-strong)"}`} />
+                  <button
+                    onClick={() => toggleSuperset(idx)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border transition shrink-0 ${
+                      bottomIsPaired
+                        ? "bg-(--accent) border-(--accent) text-white hover:bg-(--accent-strong)"
+                        : "bg-(--surface) border border-dashed border-(--line-strong) text-(--muted) hover:text-zinc-200 hover:border-(--accent-line) hover:bg-(--accent-soft)"
+                    }`}
+                    title={bottomIsPaired ? "Huỷ superset giữa 2 bài này" : "Nối 2 bài này thành superset (tập liên tiếp không nghỉ)"}
+                  >
+                    {bottomIsPaired ? (
+                      <>
+                        <Unlink2 className="w-3.5 h-3.5" />
+                        <span>Huỷ Superset {supersetLabelMap.get(ex.supersetId)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="w-3.5 h-3.5" />
+                        <span>Nối Superset</span>
+                      </>
+                    )}
+                  </button>
+                  <div className={`hidden sm:block h-px flex-1 ${bottomIsPaired ? "bg-(--accent-line)" : "bg-(--line) border-t border-dashed border-(--line-strong)"}`} />
+                </div>
+              )}
+
+              {/* Gap between non-superset pairs */}
+              {!showBottomConnector && idx < exercises.length - 1 && !bottomIsPaired && (
+                <div className="h-4" />
+              )}
+              {showBottomConnector && !bottomIsPaired && <div className="h-2" />}
+            </React.Fragment>
           );
         })}
 
@@ -463,11 +862,30 @@ export default function CreateRoutinePage({ onSave, onCancel }) {
         {exercises.length > 0 && (
           <button
             onClick={() => setPickerOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-3.5 border border-dashed border-(--line-strong) text-zinc-500 hover:text-(--accent) hover:border-(--accent-line) text-xs font-semibold transition"
+            className="w-full mt-4 flex items-center justify-center gap-2 py-3.5 border border-dashed border-(--line-strong) text-zinc-500 hover:text-(--accent) hover:border-(--accent-line) text-xs font-semibold transition"
           >
             <Plus className="w-4 h-4" />
             <span>Add Exercise</span>
           </button>
+        )}
+
+        {/* Superset helper hint */}
+        {exercises.length >= 2 && (
+          <div className="mt-3 flex items-start gap-2 bg-(--surface-3) border border-(--line) p-3">
+            <Layers className="w-3.5 h-3.5 text-(--accent) mt-0.5 shrink-0" />
+            <p className="text-[11px] leading-relaxed text-(--muted)">
+              <span className="font-semibold text-zinc-300">Superset:</span> Nhấn{" "}
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-(--surface) border border-(--line-strong) text-[10px] text-zinc-300">
+                <Link2 className="w-2.5 h-2.5" /> Nối Superset
+              </span>{" "}
+              giữa 2 bài để tập liên tiếp không nghỉ. Khi đã nối, 2 bài sẽ có viền đỏ và nhãn{" "}
+              <span className="inline-flex items-center px-1.5 py-0.5 bg-(--accent) text-white text-[9px] font-bold">SUPERSET A</span>. Nhấn{" "}
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-(--accent) text-white text-[10px]">
+                <Unlink2 className="w-2.5 h-2.5" /> Huỷ
+              </span>{" "}
+              để tách ra. Mỗi superset gồm đúng 2 bài liên tiếp.
+            </p>
+          </div>
         )}
       </div>
 

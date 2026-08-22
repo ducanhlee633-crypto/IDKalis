@@ -1,14 +1,69 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { WORKOUT_PROGRAMS_DETAIL } from "@/data/mockCalisthenicsData";
-import { Plus, Clock, Zap, Play, StickyNote, Trash2, Calendar } from "lucide-react";
+import { Plus, Clock, Zap, Play, StickyNote, Trash2, Calendar, Layers, Link2, Timer, Target, TrendingUp, Sparkles } from "lucide-react";
 import ActiveWorkoutPage from "@/components/workout/ActiveWorkoutPage";
 import CreateRoutinePage from "@/components/workout/CreateRoutinePage";
 import TrainingScheduleModal from "@/components/workout/TrainingScheduleModal";
 import { getStoredSession } from "@/lib/auth";
 import { apiListRoutines, apiCreateRoutine, apiDeleteRoutine } from "@/lib/routines";
 import { apiListTrainingSchedule, apiUpdateTrainingScheduleDay } from "@/lib/trainingSchedule";
+import { apiListGoals } from "@/lib/goals";
+
+// Helper: build superset groups for display (same logic as CreateRoutinePage / ActiveWorkoutPage)
+function buildSupersetGroups(exercises) {
+  const groups = [];
+  let i = 0;
+  while (i < exercises.length) {
+    const cur = exercises[i];
+    if (typeof cur === "string") {
+      groups.push({ type: "single", exercises: [cur] });
+      i += 1;
+      continue;
+    }
+    const nxt = exercises[i + 1];
+    if (cur.supersetId && nxt && typeof nxt !== "string" && cur.supersetId === nxt.supersetId) {
+      groups.push({ type: "superset", supersetId: cur.supersetId, exercises: [cur, nxt] });
+      i += 2;
+    } else {
+      groups.push({ type: "single", exercises: [cur] });
+      i += 1;
+    }
+  }
+  return groups;
+}
+
+function getSupersetLabelMap(exercises) {
+  const map = new Map();
+  let counter = 0;
+  const seen = new Set();
+  exercises.forEach((ex) => {
+    if (typeof ex === "string") return;
+    if (ex.supersetId && !seen.has(ex.supersetId)) {
+      seen.add(ex.supersetId);
+      map.set(ex.supersetId, String.fromCharCode(65 + counter));
+      counter++;
+    }
+  });
+  return map;
+}
+
+function getRestSeconds(ex) {
+  if (!ex || typeof ex === "string") return null;
+  const raw = ex.restSeconds ?? ex.rest_seconds ?? ex.restTime ?? ex.rest_time ?? null;
+  if (raw == null || raw === "") return null;
+  const n = Number(raw);
+  return Number.isNaN(n) ? null : n;
+}
+function formatRestShort(seconds) {
+  const n = Number(seconds);
+  if (Number.isNaN(n)) return "";
+  if (n < 60) return `${n}s`;
+  const m = Math.floor(n / 60);
+  const s = n % 60;
+  return s ? `${m}m ${s}s` : `${m}m`;
+}
 
 export default function WorkoutsPage() {
   const [filter, setFilter] = useState("ALL");
@@ -24,6 +79,9 @@ export default function WorkoutsPage() {
   const [fetchError, setFetchError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+
+  // Goals map để hiển thị tên goal trong routine
+  const [goalsMap, setGoalsMap] = useState({});
 
   // Training schedule state (7 days, PATCH từng ngày)
   const [schedules, setSchedules] = useState([]);
@@ -115,6 +173,25 @@ export default function WorkoutsPage() {
     });
   }, [fetchRoutines]);
 
+  // Fetch goals để map goalId -> title cho badge
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const session = getStoredSession();
+        const token = session?.token;
+        if (!token) return;
+        const data = await apiListGoals(token);
+        if (!cancelled && Array.isArray(data)) {
+          const map = {};
+          data.forEach((g) => { map[g.id] = g; });
+          setGoalsMap(map);
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const filteredPrograms =
     filter === "ALL" ? routines : routines.filter((p) => p.category === filter);
 
@@ -139,7 +216,7 @@ export default function WorkoutsPage() {
       const session = getStoredSession();
       const token = session?.token;
       if (!token) throw new Error("Bạn cần đăng nhập để lưu routine.");
-      // routine từ CreateRoutinePage: { name, category, timeEst (locked int), note, exercises:[{name, target, inputType, defaultSets: [{reps, time/weight/note, rpe}]}] }
+      // routine từ CreateRoutinePage: { name, category, timeEst (locked int), note, exercises:[{name, target, inputType, defaultSets: [{reps, time/weight/note, rpe}], supersetId}] }
       const payload = {
         name: routine.name,
         category: routine.category,
@@ -331,6 +408,10 @@ export default function WorkoutsPage() {
           const timeLabel = typeof timeEst === "number" ? `${timeEst} min` : String(timeEst);
           // exercises jsonb: snapshot gồm reps/sets
           const exercises = Array.isArray(prog.exercises) ? prog.exercises : [];
+          const supersetMap = getSupersetLabelMap(exercises);
+          const supersetGroups = buildSupersetGroups(exercises);
+          const supersetCount = supersetMap.size;
+
           return (
             <div
               key={prog.id}
@@ -341,7 +422,14 @@ export default function WorkoutsPage() {
                   <span className="text-[10px] font-bold text-(--accent) tracking-[0.18em] uppercase">
                     {prog.category}
                   </span>
-                  <h3 className="font-display text-base font-semibold text-zinc-100 mt-0.5">{prog.name}</h3>
+                  <h3 className="font-display text-base font-semibold text-zinc-100 mt-0.5 flex items-center gap-2 flex-wrap">
+                    {prog.name}
+                    {supersetCount > 0 && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-(--accent-soft) border border-(--accent-line) text-(--accent) text-[9px] font-bold tracking-wider">
+                        <Layers className="w-2.5 h-2.5" /> {supersetCount} SUPERSET{supersetCount > 1 ? "S" : ""}
+                      </span>
+                    )}
+                  </h3>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="px-2 py-0.5 bg-(--surface-3) border border-(--line) text-(--muted) text-[10px] font-medium">
@@ -357,16 +445,75 @@ export default function WorkoutsPage() {
                 </div>
               </div>
 
-              {/* Exercise List — render từ jsonb snapshot (có reps/sets) */}
-              <div className="space-y-1.5 my-3 bg-(--surface-3) p-3 border border-(--line)">
+              {/* Exercise List — render từ jsonb snapshot (có reps/sets) + superset grouping */}
+              <div className="space-y-2 my-3 bg-(--surface-3) p-3 border border-(--line)">
                 {exercises.length === 0 ? (
                   <span className="text-xs text-(--faint)">No exercises</span>
                 ) : (
-                  exercises.map((ex, idx) => {
-                    // ex có thể là string (legacy) hoặc object {name, target, defaultSets}
+                  supersetGroups.map((group, gIdx) => {
+                    if (group.type === "superset") {
+                      const label = supersetMap.get(group.supersetId);
+                      return (
+                        <div
+                          key={group.supersetId || gIdx}
+                          className="border border-(--accent-line) bg-(--accent-soft)/40 p-2 space-y-1.5"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-(--accent) text-white text-[8px] font-bold tracking-wider leading-none">
+                              <Layers className="w-2.5 h-2.5" /> SUPERSET {label}
+                            </span>
+                            <span className="text-[10px] text-(--accent) font-medium flex items-center gap-1">
+                              <Link2 className="w-2.5 h-2.5" /> Tập liên tiếp
+                            </span>
+                          </div>
+                          {group.exercises.map((ex, innerIdx) => {
+                            if (typeof ex === "string") {
+                              return (
+                                <div key={innerIdx} className="flex items-center gap-2 text-xs text-zinc-300 ml-1">
+                                  <span className="w-1.5 h-1.5 bg-(--accent) shrink-0" />
+                                  <span>{ex}</span>
+                                </div>
+                              );
+                            }
+                            const setsInfo = ex.defaultSets
+                              ? `${ex.defaultSets.length} sets • ${ex.defaultSets.map((s) => s.reps ?? s.time ?? s.weight ?? s.note ?? "-").join("/")}`
+                              : ex.target || "";
+                            const restRaw = getRestSeconds(ex);
+                            const restSec = restRaw ?? 90;
+                            const isDefaultRest = restRaw == null;
+                            const gl = ex.goalLink || ex.goal_link;
+                            const linkedGoal = gl?.goalId ? goalsMap[gl.goalId] : null;
+                            return (
+                              <div key={ex.id || innerIdx} className="flex items-center gap-2 text-xs text-zinc-100 ml-1 flex-wrap">
+                                <span className="w-1.5 h-1.5 bg-white shrink-0" />
+                                <span className="flex-1 min-w-0 truncate">
+                                  <span className="font-medium">{ex.name}</span>
+                                  {ex.target ? <span className="text-zinc-300"> — {ex.target}</span> : null}
+                                  {setsInfo ? <span className="text-zinc-400 hidden sm:inline"> • {setsInfo}</span> : null}
+                                  {gl?.goalId && (
+                                    <span className={`ml-1.5 inline-flex items-center gap-1 px-1 py-0.5 border text-[9px] font-bold tracking-wide ${gl.type === "direct" ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)" : "bg-amber-500/10 border-amber-500/30 text-amber-400"}`}>
+                                      {gl.type === "direct" ? <Sparkles className="w-2.5 h-2.5" /> : <TrendingUp className="w-2.5 h-2.5" />}
+                                      {linkedGoal ? linkedGoal.title : gl.goalId.slice(0,6)} {gl.type === "indirect" ? `+${gl.indirectGain ?? 3}%` : ""}
+                                    </span>
+                                  )}
+                                </span>
+                                <span
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 border text-[10px] font-medium shrink-0 ${isDefaultRest ? "bg-[#1a1a1e] border-white/10 text-zinc-500" : "bg-[#1a1a1e] border-(--accent-line) text-(--accent)"}`}
+                                  title={isDefaultRest ? "Mặc định 90s (routine cũ)" : `Rest ${formatRestShort(restSec)}`}
+                                >
+                                  <Timer className="w-3 h-3" />
+                                  {formatRestShort(restSec)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+                    const ex = group.exercises[0];
                     if (typeof ex === "string") {
                       return (
-                        <div key={idx} className="flex items-center gap-2 text-xs text-zinc-300">
+                        <div key={gIdx} className="flex items-center gap-2 text-xs text-zinc-300">
                           <span className="w-1.5 h-1.5 bg-(--accent)" />
                           <span>{ex}</span>
                         </div>
@@ -375,13 +522,31 @@ export default function WorkoutsPage() {
                     const setsInfo = ex.defaultSets
                       ? `${ex.defaultSets.length} sets • ${ex.defaultSets.map((s) => s.reps ?? s.time ?? s.weight ?? s.note ?? "-").join("/")}`
                       : ex.target || "";
+                    const restRawSingle = getRestSeconds(ex);
+                    const restSecSingle = restRawSingle ?? 90;
+                    const isDefaultSingle = restRawSingle == null;
+                    const glSingle = ex.goalLink || ex.goal_link;
+                    const linkedGoalSingle = glSingle?.goalId ? goalsMap[glSingle.goalId] : null;
                     return (
-                      <div key={ex.id || idx} className="flex items-center gap-2 text-xs text-zinc-300">
+                      <div key={ex.id || gIdx} className="flex items-center gap-2 text-xs text-zinc-300 flex-wrap">
                         <span className="w-1.5 h-1.5 bg-(--accent) shrink-0" />
                         <span className="flex-1 min-w-0 truncate">
                           <span className="font-medium text-zinc-200">{ex.name}</span>
                           {ex.target ? <span className="text-zinc-400"> — {ex.target}</span> : null}
                           {setsInfo ? <span className="text-(--faint) hidden sm:inline"> • {setsInfo}</span> : null}
+                          {glSingle?.goalId && (
+                            <span className={`ml-1.5 inline-flex items-center gap-1 px-1 py-0.5 border text-[9px] font-bold tracking-wide ${glSingle.type === "direct" ? "bg-(--accent-soft) border-(--accent-line) text-(--accent)" : "bg-amber-500/10 border-amber-500/30 text-amber-400"}`}>
+                              {glSingle.type === "direct" ? <Sparkles className="w-2.5 h-2.5" /> : <TrendingUp className="w-2.5 h-2.5" />}
+                              {linkedGoalSingle ? linkedGoalSingle.title : glSingle.goalId.slice(0,6)} {glSingle.type === "indirect" ? `+${glSingle.indirectGain ?? 3}%` : ""}
+                            </span>
+                          )}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 border text-[10px] font-medium shrink-0 ${isDefaultSingle ? "bg-(--surface-3) border-(--line) text-zinc-500" : "bg-(--surface-3) border-(--accent-line) text-(--accent)"}`}
+                          title={isDefaultSingle ? "Mặc định 90s" : `Rest ${formatRestShort(restSecSingle)}`}
+                        >
+                          <Timer className="w-3 h-3 text-(--accent)" />
+                          {formatRestShort(restSecSingle)}
                         </span>
                       </div>
                     );
@@ -398,7 +563,7 @@ export default function WorkoutsPage() {
                   </span>
                   <span className="flex items-center gap-1.5 text-(--muted)">
                     <Zap className="w-3.5 h-3.5 text-(--accent)" />
-                    {prog.intensity ?? `${exercises.length} exercises`}
+                    {prog.intensity ?? `${exercises.length} exercises${supersetCount ? ` • ${supersetCount} superset` : ""}`}
                   </span>
                 </div>
               </div>
