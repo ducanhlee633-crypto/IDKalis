@@ -134,7 +134,8 @@ class ExerciseProgressResponse(ExerciseProgressCreate):
 
 # Schema nhận dữ liệu khi tạo routine (POST /api/routines).
 # Frontend gửi camelCase (timeEst), DB lưu snake_case (time_est).
-# exercises là snapshot jsonb: mỗi exercise gồm reps/sets (defaultSets) để giữ đủ thông tin tập.
+# exercises là snapshot jsonb: mỗi exercise gồm reps/sets (defaultSets) + restSeconds để giữ đủ thông tin tập.
+# restSeconds: thời gian nghỉ per-exercise (giây), 0-600, mặc định 90 nếu thiếu (backward compat).
 class RoutineCreate(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
